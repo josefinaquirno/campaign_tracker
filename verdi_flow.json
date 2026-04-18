@@ -61,6 +61,16 @@
     },
     {
       "parameters": {
+        "jsCode": "// Decode existing data.json from GitHub (base64 with line breaks)\nconst existingB64 = $('Get File SHA').first().json.content.replace(/\\n/g, '');\nconst existingData = JSON.parse(Buffer.from(existingB64, 'base64').toString('utf-8'));\nconst historical = existingData.historical || [];\n\n// Decode new BQ-generated data (base64)\nconst newDataB64 = $('BQ Campaign Tracker').first().json.data_b64\n  .replace(/\\n/g, '').replace(/\\r/g, '');\nconst newData = JSON.parse(Buffer.from(newDataB64, 'base64').toString('utf-8'));\n\n// Preserve historical array\nnewData.historical = historical;\n\n// Re-encode for GitHub push\nconst mergedB64 = Buffer.from(JSON.stringify(newData), 'utf-8').toString('base64');\n\nreturn [{ json: { merged_b64: mergedB64 } }];"
+      },
+      "id": "merge-historical",
+      "name": "Merge Historical",
+      "type": "n8n-nodes-base.code",
+      "position": [576, 80],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
         "method": "PUT",
         "url": "https://api.github.com/repos/josefinaquirno/campaign_tracker/contents/data.json",
         "sendHeaders": true,
@@ -89,11 +99,11 @@
             },
             {
               "name": "content",
-              "value": "={{ $('BQ Campaign Tracker').first().json.data_b64.replace(/\\n/g, '').replace(/\\r/g, '') }}"
+              "value": "={{ $('Merge Historical').first().json.merged_b64 }}"
             },
             {
               "name": "sha",
-              "value": "={{ $json.sha }}"
+              "value": "={{ $('Get File SHA').first().json.sha }}"
             }
           ]
         },
@@ -102,7 +112,7 @@
       "id": "push-github",
       "name": "Push to GitHub",
       "type": "n8n-nodes-base.httpRequest",
-      "position": [656, 80],
+      "position": [736, 80],
       "typeVersion": 4.2
     }
   ],
@@ -114,6 +124,9 @@
       "main": [[{ "node": "Get File SHA", "type": "main", "index": 0 }]]
     },
     "Get File SHA": {
+      "main": [[{ "node": "Merge Historical", "type": "main", "index": 0 }]]
+    },
+    "Merge Historical": {
       "main": [[{ "node": "Push to GitHub", "type": "main", "index": 0 }]]
     }
   },
