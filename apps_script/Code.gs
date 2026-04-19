@@ -4,8 +4,8 @@
 // Deploy as: "Execute as: Me" + "Who has access: Anyone"
 // ============================================================
 
-var GITHUB_RAW_URL            = 'https://raw.githubusercontent.com/josefinaquirno/campaign_tracker/main/data.json';
-var GITHUB_RAW_URL_HISTORICAL = 'https://raw.githubusercontent.com/josefinaquirno/campaign_tracker/main/historical.json';
+var GITHUB_RAW_URL            = 'https://raw.githubusercontent.com/josefinaquirno/campaign_tracker/main/docs/data.json';
+var GITHUB_RAW_URL_HISTORICAL = 'https://raw.githubusercontent.com/josefinaquirno/campaign_tracker/main/docs/historical.json';
 
 function doGet() {
   return HtmlService

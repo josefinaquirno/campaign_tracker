@@ -37,7 +37,7 @@
     },
     {
       "parameters": {
-        "url": "https://api.github.com/repos/josefinaquirno/campaign_tracker/contents/data.json",
+        "url": "https://api.github.com/repos/josefinaquirno/campaign_tracker/contents/docs/data.json",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -62,7 +62,7 @@
     {
       "parameters": {
         "method": "PUT",
-        "url": "https://api.github.com/repos/josefinaquirno/campaign_tracker/contents/data.json",
+        "url": "https://api.github.com/repos/josefinaquirno/campaign_tracker/contents/docs/data.json",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
