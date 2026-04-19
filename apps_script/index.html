@@ -335,6 +335,29 @@ function delta(c,p){ if(!p||p===0||isNaN(c)||isNaN(p))return null; var pct=(c-p)
 function deltaStr(c,p,isRate){ if(!p||p===0||isNaN(c)||isNaN(p))return '—'; if(isRate){var pp=(c-p)*100;return (pp>=0?'+':'')+pp.toFixed(2)+'pp';} var pct=(c-p)/Math.abs(p)*100; return (pct>=0?'▲ ':'▼ ')+Math.abs(pct).toFixed(1)+'%'; }
 function deltaClass(c,p){ if(!p||p===0)return ''; return c>=p?'dp':'dn'; }
 
+// ── Target helpers ──────────────────────────────
+// Suma valores del array de targets para los días con datos reales
+function tgtAccum(arr, tgtDates, dataDates){
+  if(!arr||!arr.length||!tgtDates||!dataDates||!dataDates.length) return null;
+  var sum=0, found=false;
+  dataDates.forEach(function(d){ var i=tgtDates.indexOf(d); if(i>=0){sum+=arr[i]||0; found=true;} });
+  return found?sum:null;
+}
+// Promedio ponderado para métricas ratio (CVR, CTR, etc.)
+function tgtAvg(arr, tgtDates, dataDates){
+  if(!arr||!arr.length||!tgtDates||!dataDates||!dataDates.length) return null;
+  var sum=0, count=0;
+  dataDates.forEach(function(d){ var i=tgtDates.indexOf(d); if(i>=0&&arr[i]!=null){sum+=arr[i]; count++;} });
+  return count>0?sum/count:null;
+}
+// Slice del array de targets para los días con datos (para líneas en charts)
+function tgtLine(arr, tgtDates, dataDates){
+  if(!arr||!arr.length||!tgtDates||!dataDates) return null;
+  var result=dataDates.map(function(d){ var i=tgtDates.indexOf(d); return i>=0?arr[i]:null; });
+  return result.some(function(v){return v!=null;})?result:null;
+}
+function tgtDS(data){ return {label:'Target',data:data,borderColor:'#aaa',borderDash:[6,4],backgroundColor:'transparent',tension:.3,pointRadius:2,borderWidth:1.5,fill:false}; }
+
 // ──────────────────────────────────────────────
 // MAIN SLIDER
 // ──────────────────────────────────────────────
@@ -472,6 +495,12 @@ function renderLanding(){
   document.getElementById('ldg-chart-sub').textContent=(LDG_FILTER==='ALL'?'Todas las landings':LDG_FILTER);
 
   var tgt = (D.targets&&D.targets.landing)||{};
+  var tgtDates = (D.targets&&D.targets.dates)||[];
+  var tgtVal = {
+    sessions: tgtAccum(tgt.sessions, tgtDates, dates),
+    nmv:      tgtAccum(tgt.nmv,      tgtDates, dates),
+    cvr:      tgtAvg(tgt.cvr,        tgtDates, dates)
+  };
 
   // KPIs
   var kpiCfg = [
@@ -488,12 +517,12 @@ function renderLanding(){
   ];
   document.getElementById('ldg-kpis').innerHTML=kpiCfg.map(function(k){
     var tgtStr='',cls='';
-    if(k.tgtKey&&tgt[k.tgtKey]!=null&&k.raw!=null){
-      var pct=(k.raw-tgt[k.tgtKey])/tgt[k.tgtKey]*100;
+    if(k.tgtKey&&tgtVal[k.tgtKey]!=null&&k.raw!=null){
+      var pct=(k.raw-tgtVal[k.tgtKey])/tgtVal[k.tgtKey]*100;
       cls=pct>=0?'vs-target-ok':pct>=-10?'vs-target-warn':'vs-target-bad';
       var tc=pct>=0?'ok':pct>=-10?'warn':'bad';
       var isR=k.tgtKey==='cvr'||k.tgtKey==='ctr';
-      tgtStr='<div class="kpi-target '+tc+'">'+(pct>=0?'▲ ':'▼ ')+Math.abs(pct).toFixed(1)+'% vs target '+(isR?fPct(tgt[k.tgtKey],3):fNMV(tgt[k.tgtKey]))+'</div>';
+      tgtStr='<div class="kpi-target '+tc+'">'+(pct>=0?'▲ ':'▼ ')+Math.abs(pct).toFixed(1)+'% vs target '+(isR?fPct(tgtVal[k.tgtKey],3):fNum(tgtVal[k.tgtKey]))+'</div>';
     }
     return '<div class="kpi-card '+cls+'"><div class="kpi-label">'+k.lbl+'</div><div class="kpi-val">'+k.val+'</div><div class="kpi-sub">'+k.sub+'</div>'+tgtStr+'</div>';
   }).join('');
@@ -526,11 +555,13 @@ function renderLanding(){
         return (D.landing||[]).filter(function(r){return r.landing_name===n&&(r.date||r.DATE)===d;}).reduce(function(s,r){return s+(+r.nmv||0);},0);
       }),borderColor:PALETTE[i%PALETTE.length],backgroundColor:'transparent',tension:.3,pointRadius:4};
     });
-    mkLine('cLDG_SESS',lbls,sessDS,'');
-    mkLine('cLDG_NMV',lbls,nmvDS,'');
+    var tSessLine=tgtLine(tgt.sessions,tgtDates,dates), tNMVLine=tgtLine(tgt.nmv,tgtDates,dates);
+    mkLine('cLDG_SESS',lbls,sessDS.concat(tSessLine?[tgtDS(tSessLine)]:[]),'');
+    mkLine('cLDG_NMV',lbls,nmvDS.concat(tNMVLine?[tgtDS(tNMVLine)]:[]),'');
   } else {
-    mkLine('cLDG_SESS',lbls,[{label:'Sessions',data:dates.map(function(d){return byDate[d].sessions;}),borderColor:C1,backgroundColor:'rgba(255,230,0,0.1)',fill:true,tension:.3,pointRadius:4}],'');
-    mkLine('cLDG_NMV', lbls,[{label:'NMV',    data:dates.map(function(d){return byDate[d].nmv;}),    borderColor:C2,backgroundColor:'rgba(26,26,46,0.08)',fill:true,tension:.3,pointRadius:4}],'');
+    var tSessLine=tgtLine(tgt.sessions,tgtDates,dates), tNMVLine=tgtLine(tgt.nmv,tgtDates,dates);
+    mkLine('cLDG_SESS',lbls,[{label:'Sessions',data:dates.map(function(d){return byDate[d].sessions;}),borderColor:C1,backgroundColor:'rgba(255,230,0,0.1)',fill:true,tension:.3,pointRadius:4}].concat(tSessLine?[tgtDS(tSessLine)]:[]),'');
+    mkLine('cLDG_NMV', lbls,[{label:'NMV',    data:dates.map(function(d){return byDate[d].nmv;}),    borderColor:C2,backgroundColor:'rgba(26,26,46,0.08)',fill:true,tension:.3,pointRadius:4}].concat(tNMVLine?[tgtDS(tNMVLine)]:[]),'');
   }
 
   // Table by day
@@ -603,6 +634,12 @@ function renderContainer(){
   document.getElementById('cnt-badge-period').textContent='hasta '+fDate(lastDate);
 
   var tgt=(D.targets&&D.targets.container)||{};
+  var tgtDates=(D.targets&&D.targets.dates)||[];
+  var tgtVal={
+    sessions: tgtAccum(tgt.sessions, tgtDates, dates),
+    nmv:      tgtAccum(tgt.nmv,      tgtDates, dates),
+    cvr:      tgtAvg(tgt.cvr,        tgtDates, dates)
+  };
 
   // KPIs
   var kpiCfg=[
@@ -620,20 +657,21 @@ function renderContainer(){
   ];
   document.getElementById('cnt-kpis').innerHTML=kpiCfg.map(function(k){
     var tgtStr='',cls='';
-    if(k.tgtKey&&tgt[k.tgtKey]!=null&&k.raw!=null){
-      var pct=(k.raw-tgt[k.tgtKey])/tgt[k.tgtKey]*100;
+    if(k.tgtKey&&tgtVal[k.tgtKey]!=null&&k.raw!=null){
+      var pct=(k.raw-tgtVal[k.tgtKey])/tgtVal[k.tgtKey]*100;
       cls=pct>=0?'vs-target-ok':pct>=-10?'vs-target-warn':'vs-target-bad';
       var tc=pct>=0?'ok':pct>=-10?'warn':'bad';
       var isR=k.tgtKey==='cvr';
-      tgtStr='<div class="kpi-target '+tc+'">'+(pct>=0?'▲ ':'▼ ')+Math.abs(pct).toFixed(1)+'% vs target '+(isR?fPct(tgt[k.tgtKey],3):fNMV(tgt[k.tgtKey]))+'</div>';
+      tgtStr='<div class="kpi-target '+tc+'">'+(pct>=0?'▲ ':'▼ ')+Math.abs(pct).toFixed(1)+'% vs target '+(isR?fPct(tgtVal[k.tgtKey],3):fNum(tgtVal[k.tgtKey]))+'</div>';
     }
     return '<div class="kpi-card '+cls+'"><div class="kpi-label">'+k.lbl+'</div><div class="kpi-val">'+k.val+'</div><div class="kpi-sub">'+k.sub+'</div>'+(tgtStr||'')+'</div>';
   }).join('');
 
   // Charts
   var lbls=dates.map(fDate);
-  mkLine('cCNT_SESS',lbls,[{label:'Sessions',data:dates.map(function(d){return byDate[d].sessions;}),borderColor:C1,backgroundColor:'rgba(255,230,0,0.1)',fill:true,tension:.3,pointRadius:4}],'');
-  mkLine('cCNT_NMV', lbls,[{label:'NMV',    data:dates.map(function(d){return byDate[d].nmv;}),    borderColor:C2,backgroundColor:'rgba(26,26,46,0.08)',fill:true,tension:.3,pointRadius:4}],'');
+  var tSessLine=tgtLine(tgt.sessions,tgtDates,dates), tNMVLine=tgtLine(tgt.nmv,tgtDates,dates);
+  mkLine('cCNT_SESS',lbls,[{label:'Sessions',data:dates.map(function(d){return byDate[d].sessions;}),borderColor:C1,backgroundColor:'rgba(255,230,0,0.1)',fill:true,tension:.3,pointRadius:4}].concat(tSessLine?[tgtDS(tSessLine)]:[]),'');
+  mkLine('cCNT_NMV', lbls,[{label:'NMV',    data:dates.map(function(d){return byDate[d].nmv;}),    borderColor:C2,backgroundColor:'rgba(26,26,46,0.08)',fill:true,tension:.3,pointRadius:4}].concat(tNMVLine?[tgtDS(tNMVLine)]:[]),'');
 
   // Table: by container or by vertical
   var colsCnt=[
