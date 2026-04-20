@@ -698,9 +698,15 @@ function renderContainer(){
   var tgt=(D.targets&&D.targets.container)||{};
   var tgtDates=(D.targets&&D.targets.dates)||[];
   var tgtVal={
-    sessions: tgtAccum(tgt.sessions, tgtDates, dates),
-    nmv:      tgtAccum(tgt.nmv,      tgtDates, dates),
-    cvr:      tgtAvg(tgt.cvr,        tgtDates, dates)
+    sessions:       tgtAccum(tgt.sessions,       tgtDates, dates),
+    nmv:            tgtAccum(tgt.nmv,            tgtDates, dates),
+    cvr:            tgtAvg(tgt.cvr,              tgtDates, dates),
+    nasp:           tgtAvg(tgt.nasp,             tgtDates, dates),
+    nsi:            tgtAccum(tgt.nsi,            tgtDates, dates),
+    transactions:   tgtAccum(tgt.transactions,   tgtDates, dates),
+    users_vip:      tgtAccum(tgt.users_vip,      tgtDates, dates),
+    share_sessions: tgtAvg(tgt.share_sessions,   tgtDates, dates),
+    share_nmv:      tgtAvg(tgt.share_nmv,        tgtDates, dates)
   };
 
   // KPIs
@@ -708,12 +714,14 @@ function renderContainer(){
     {lbl:'SESIONES',           val:fNum(tot.sessions),       sub:'Total containers campaña', raw:tot.sessions, tgtKey:'sessions'},
     {lbl:'NMV (USD)',          val:fNMV(tot.nmv),            sub:'168hs atrib.', raw:tot.nmv, tgtKey:'nmv'},
     {lbl:'CVR',                val:fPct(tot.cvr,2),          sub:'Orders / Sessions', raw:tot.cvr, tgtKey:'cvr'},
-    {lbl:'NASP',               val:fNMV(tot.nasp),           sub:'NMV / Orders'},
-    {lbl:'NSI/T',              val:tot.nsit?tot.nsit.toFixed(2):'—', sub:'NSI / Transactions'},
+    {lbl:'NASP',               val:fNMV(tot.nasp),           sub:'NMV / Orders', raw:tot.nasp, tgtKey:'nasp'},
+    {lbl:'NSI/T',              val:tot.nsit?tot.nsit.toFixed(2):'—', sub:'NSI / Transactions', raw:tot.nsi, tgtKey:'nsi'},
+    {lbl:'TRANSACCIONES',      val:fNum(tot.transactions),   sub:'Acumuladas', raw:tot.transactions, tgtKey:'transactions'},
+    {lbl:'SESIONES VIP',       val:fNum(tot.users_vip),      sub:'Usuarios únicos VIP', raw:tot.users_vip, tgtKey:'users_vip'},
     {lbl:'ORDERS',             val:fNum(tot.orders),         sub:'Acumuladas'},
     {lbl:'BUYERS',             val:fNum(tot.buyers),         sub:'Únicos'},
-    {lbl:'SHARE SESS vs SITE', val:shareSessSite!=null?fPct(shareSessSite,2):'—', sub:'Containers / Total site'},
-    {lbl:'SHARE NMV vs SITE',  val:shareNMVSite!=null?fPct(shareNMVSite,2):'—',  sub:'Containers / Total site'},
+    {lbl:'SHARE SESS vs SITE', val:shareSessSite!=null?fPct(shareSessSite,2):'—', sub:'Containers / Total site', raw:shareSessSite, tgtKey:'share_sessions'},
+    {lbl:'SHARE NMV vs SITE',  val:shareNMVSite!=null?fPct(shareNMVSite,2):'—',  sub:'Containers / Total site', raw:shareNMVSite, tgtKey:'share_nmv'},
     {lbl:'SHARE SESS vs CNTS', val:shareSessCnt!=null?fPct(shareSessCnt,2):'—',  sub:'Campaña / Total containers'},
     {lbl:'SHARE NMV vs CNTS',  val:shareNMVCnt!=null?fPct(shareNMVCnt,2):'—',   sub:'Campaña / Total containers'}
   ];
@@ -723,8 +731,10 @@ function renderContainer(){
       var pct=(k.raw-tgtVal[k.tgtKey])/tgtVal[k.tgtKey]*100;
       cls=pct>=0?'vs-target-ok':pct>=-10?'vs-target-warn':'vs-target-bad';
       var tc=pct>=0?'ok':pct>=-10?'warn':'bad';
-      var isR=k.tgtKey==='cvr';
-      tgtStr='<div class="kpi-target '+tc+'">'+(pct>=0?'▲ ':'▼ ')+Math.abs(pct).toFixed(1)+'% vs target '+(isR?fPct(tgtVal[k.tgtKey],2):fNum(tgtVal[k.tgtKey]))+'</div>';
+      var isR=k.tgtKey==='cvr'||k.tgtKey==='share_sessions'||k.tgtKey==='share_nmv';
+      var isCur=k.tgtKey==='nasp';
+      var tgtDisplay=isR?fPct(tgtVal[k.tgtKey],2):isCur?fNMV(tgtVal[k.tgtKey]):fNum(tgtVal[k.tgtKey]);
+      tgtStr='<div class="kpi-target '+tc+'">'+(pct>=0?'▲ ':'▼ ')+Math.abs(pct).toFixed(1)+'% vs target '+tgtDisplay+'</div>';
     }
     return '<div class="kpi-card '+cls+'"><div class="kpi-label">'+k.lbl+'</div><div class="kpi-val">'+k.val+'</div><div class="kpi-sub">'+k.sub+'</div>'+(tgtStr||'')+'</div>';
   }).join('');
