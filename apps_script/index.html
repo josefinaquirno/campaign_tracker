@@ -539,7 +539,7 @@ function renderLanding(){
     a.users_vip+=b.users_vip; a.buyers+=b.buyers; return a;
   },{sessions:0,nmv:0,orders:0,transactions:0,nsi:0,users_landing:0,users_container:0,users_vip:0,buyers:0});
 
-  tot.cvr  = tot.sessions>0 ? tot.orders/tot.sessions : 0;
+  tot.cvr  = tot.sessions>0 ? tot.transactions/tot.sessions : 0;
   tot.nasp = tot.orders>0   ? tot.nmv/tot.orders : 0;
   tot.nsit = tot.transactions>0 ? tot.nsi/tot.transactions : 0;
   tot.ctr  = tot.users_landing>0 ? tot.users_container/tot.users_landing : 0;
@@ -569,7 +569,7 @@ function renderLanding(){
     {lbl:'SESIONES',     val:fNum(tot.sessions),    sub:'Acumuladas', raw:tot.sessions, tgtKey:'sessions'},
     {lbl:'NMV (USD)',    val:fNMV(tot.nmv),          sub:'168hs atrib.', raw:tot.nmv, tgtKey:'nmv'},
     {lbl:'CTR',          val:fPct(tot.ctr,2),        sub:'Users container / Users landing', raw:tot.ctr, tgtKey:'ctr'},
-    {lbl:'CVR',          val:fPct(tot.cvr,2),        sub:'Orders / Sessions', raw:tot.cvr, tgtKey:'cvr'},
+    {lbl:'CVR',          val:fPct(tot.cvr,2),        sub:'Transacciones / Sesiones', raw:tot.cvr, tgtKey:'cvr'},
     {lbl:'NASP',         val:fNMV(tot.nasp),         sub:'NMV / Orders', raw:null, tgtKey:null},
     {lbl:'NSI/T',        val:tot.nsit?tot.nsit.toFixed(2):'—', sub:'NSI / Transactions', raw:null, tgtKey:null},
     {lbl:'ORDERS',       val:fNum(tot.orders),       sub:'Acumuladas', raw:null, tgtKey:null},
@@ -629,7 +629,7 @@ function renderLanding(){
   // Table by day
   document.getElementById('ldg-tbl-badge').textContent=dates.length+' días';
   var cols2=[{k:'date',l:'Fecha',r:false},{k:'sessions',l:'Sesiones',r:true},{k:'nmv',l:'NMV',r:true,nmv:true},{k:'orders',l:'Orders',r:true},{k:'cvr',l:'CVR',r:true,rate:true},{k:'nasp',l:'NASP',r:true,nmv:true},{k:'buyers',l:'Buyers',r:true},{k:'nsi',l:'NSI',r:true},{k:'ctr',l:'CTR',r:true,rate:true}];
-  var tblRows=dates.map(function(d){var b=byDate[d]; return {date:fDate(d),sessions:b.sessions,nmv:b.nmv,orders:b.orders,cvr:b.sessions>0?b.orders/b.sessions:0,nasp:b.orders>0?b.nmv/b.orders:0,buyers:b.buyers,nsi:b.nsi,ctr:b.users_landing>0?b.users_container/b.users_landing:0};});
+  var tblRows=dates.map(function(d){var b=byDate[d]; return {date:fDate(d),sessions:b.sessions,nmv:b.nmv,orders:b.orders,cvr:b.sessions>0?b.transactions/b.sessions:0,nasp:b.orders>0?b.nmv/b.orders:0,buyers:b.buyers,nsi:b.nsi,ctr:b.users_landing>0?b.users_container/b.users_landing:0};});
   var h='<table><thead><tr>'+cols2.map(function(c){return '<th style="'+(c.r?'text-align:right':'')+'">'+c.l+'</th>';}).join('')+'</tr></thead><tbody>';
   tblRows.forEach(function(row){
     h+='<tr>'+cols2.map(function(c){
@@ -851,8 +851,9 @@ function renderInlineComparison(placement, containerId){
     return dates.map(function(d){
       var b=map[d];
       if(isMS) return {clicks:b.clicks,prints:b.prints,ctr:b.prints>0?b.clicks/b.prints:0};
+      var cvr=b.sessions>0?(placement==='landing'?b.transactions:b.orders)/b.sessions:0;
       return {sessions:b.sessions,nmv:b.nmv,orders:b.orders,buyers:b.buyers,
-              cvr:b.sessions>0?b.orders/b.sessions:0,nasp:b.orders>0?b.nmv/b.orders:0,
+              cvr:cvr,nasp:b.orders>0?b.nmv/b.orders:0,
               nsit:b.transactions>0?b.nsi/b.transactions:0};
     });
   }
