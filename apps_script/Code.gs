@@ -6,6 +6,7 @@
 
 var GITHUB_RAW_URL            = 'https://raw.githubusercontent.com/josefinaquirno/campaign_tracker/main/docs/data.json';
 var GITHUB_RAW_URL_HISTORICAL = 'https://raw.githubusercontent.com/josefinaquirno/campaign_tracker/main/docs/historical.json';
+var GITHUB_RAW_URL_CALIDAD    = 'https://raw.githubusercontent.com/josefinaquirno/campaign_tracker/main/docs/calidad.json';
 
 function doGet() {
   return HtmlService
@@ -38,6 +39,23 @@ function getJsonData() {
         refreshed_at: 'error: ' + e.message
       };
     }
+  }
+}
+
+function getCalidadData() {
+  try {
+    var response = UrlFetchApp.fetch(GITHUB_RAW_URL_CALIDAD + '?v=' + Date.now());
+    var raw = response.getContentText();
+    try {
+      var decoded = Utilities.newBlob(Utilities.base64Decode(JSON.parse(raw))).getDataAsString();
+      return JSON.parse(decoded);
+    } catch (e2) {
+      return JSON.parse(raw);
+    }
+  } catch (e) {
+    return { camp_tasa_visita:0, tot_exhib:0, tot_visit:0, tot_gmv_i:0,
+             steps:[], financiacion:[], tipo_oferta:[], bench:{},
+             containers:[], drill:[], container_groups:{}, refreshed_at:'' };
   }
 }
 

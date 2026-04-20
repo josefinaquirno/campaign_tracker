@@ -155,6 +155,8 @@
   <button class="tab-btn" onclick="switchTab('ms',this)">Main Slider</button>
   <button class="tab-btn" onclick="switchTab('landing',this)">Landing</button>
   <button class="tab-btn" onclick="switchTab('container',this)">Containers</button>
+  <button class="tab-btn" onclick="switchTab('calidad-oferta',this)">Oferta</button>
+  <button class="tab-btn" onclick="switchTab('calidad-containers',this)">Calidad Containers</button>
 </div>
 
 <!-- COMPARISON BAR -->
@@ -279,12 +281,67 @@
       <div id="cmp-container"></div>
     </div>
 
+    <!-- ==================== OFERTA TAB ==================== -->
+    <div class="tab-panel" id="panel-calidad-oferta">
+      <div class="section-label">CALIDAD DE OFERTA <span class="badge" id="cal-badge-period">—</span></div>
+      <div id="cal-loading" style="color:#aaa;font-size:13px;padding:20px 0">Cargando datos de calidad...</div>
+
+      <!-- Funnel header -->
+      <div id="cal-funnel-header" style="display:none">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px">
+          <div class="kpi-card" id="cal-step-e"></div>
+          <div class="kpi-card" id="cal-step-v"></div>
+          <div class="kpi-card" id="cal-step-g"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div>
+            <div class="section-label">Por tipo de financiación</div>
+            <div id="cal-tabla-fin"></div>
+          </div>
+          <div>
+            <div class="section-label">Por tipo de oferta</div>
+            <div id="cal-tabla-tipo"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== CALIDAD CONTAINERS TAB ==================== -->
+    <div class="tab-panel" id="panel-calidad-containers">
+      <div class="section-label">CONTAINERS — CALIDAD DE OFERTA <span class="badge" id="cal-cnt-badge">—</span></div>
+      <div id="cal-cnt-loading" style="color:#aaa;font-size:13px;padding:20px 0">Cargando datos de calidad...</div>
+      <div id="cal-cnt-body" style="display:none">
+        <div class="table-card">
+          <div class="table-wrap">
+            <table>
+              <thead><tr>
+                <th>Container</th>
+                <th style="text-align:right">CVR (Trx/Ses)</th>
+                <th style="text-align:right">NMV</th>
+                <th style="text-align:right">Share NMV</th>
+                <th style="text-align:right">Dto. Pond.</th>
+                <th style="text-align:right">RIU High %</th>
+                <th style="text-align:right">Sesiones</th>
+                <th>Diagnóstico</th>
+              </tr></thead>
+              <tbody id="cal-cnt-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+        <div id="cal-cnt-drill-area"></div>
+      </div>
+    </div>
+
   </div><!-- /content -->
 </div><!-- /main -->
 
 <script>
 var D = { campaign:{name:'',start:'',end:''}, ms:[], landing:[], container:[],
           total_containers:[], total_site:[], historical:[], targets:{ms:{},landing:{},container:{}}, refreshed_at:'' };
+var C = { camp_tasa_visita:0, tot_exhib:0, tot_visit:0, tot_gmv_i:0,
+          steps:[], financiacion:[], tipo_oferta:[], bench:{},
+          containers:[], drill:[], container_groups:{}, refreshed_at:'' };
+var CAL_OPEN_DRILL = null;
 var CH = {};
 var ACTIVE_TAB = 'summary';
 var LDG_FILTER = 'ALL';
@@ -307,12 +364,27 @@ function load(){
       .withSuccessHandler(function(d){init(d);})
       .withFailureHandler(function(e){document.getElementById('loading').textContent='Error: '+e.message;})
       .getJsonData();
+    // Calidad carga en segundo plano
+    google.script.run
+      .withSuccessHandler(function(c){initCalidad(c);})
+      .withFailureHandler(function(){/* silencioso */})
+      .getCalidadData();
   } else {
     fetch('data.json?v='+Date.now())
       .then(function(r){return r.json();})
       .then(function(d){init(d);})
       .catch(function(e){document.getElementById('loading').textContent='Error cargando datos: '+e.message;});
+    fetch('calidad.json?v='+Date.now())
+      .then(function(r){return r.json();})
+      .then(function(c){initCalidad(c);})
+      .catch(function(){});
   }
+}
+
+function initCalidad(c){
+  C = c;
+  if(ACTIVE_TAB==='calidad-oferta')     renderCalidadOferta();
+  if(ACTIVE_TAB==='calidad-containers') renderCalidadContainers();
 }
 
 function init(d){
@@ -355,10 +427,12 @@ function switchTab(tab, btn){
 }
 
 function renderAll(){
-  if(ACTIVE_TAB==='summary')   renderSummary();
-  if(ACTIVE_TAB==='ms')        renderMS();
-  if(ACTIVE_TAB==='landing')   renderLanding();
-  if(ACTIVE_TAB==='container') renderContainer();
+  if(ACTIVE_TAB==='summary')              renderSummary();
+  if(ACTIVE_TAB==='ms')                   renderMS();
+  if(ACTIVE_TAB==='landing')              renderLanding();
+  if(ACTIVE_TAB==='container')            renderContainer();
+  if(ACTIVE_TAB==='calidad-oferta')       renderCalidadOferta();
+  if(ACTIVE_TAB==='calidad-containers')   renderCalidadContainers();
 }
 
 // ──────────────────────────────────────────────
@@ -1238,6 +1312,231 @@ function mkLine(id,labels,datasets,sfx){
 function mkBar(id,labels,datasets){
   if(CH[id]) CH[id].destroy();
   CH[id]=new Chart(document.getElementById(id).getContext('2d'),{type:'bar',data:{labels:labels,datasets:datasets},options:JSON.parse(JSON.stringify(BASE_OPTS))});
+}
+
+// ──────────────────────────────────────────────
+// CALIDAD DE OFERTA — Tab Oferta
+// ──────────────────────────────────────────────
+function renderCalidadOferta(){
+  var loading=document.getElementById('cal-loading');
+  var header=document.getElementById('cal-funnel-header');
+  if(!C||!C.refreshed_at){
+    if(loading) loading.style.display='';
+    if(header)  header.style.display='none';
+    return;
+  }
+  if(loading) loading.style.display='none';
+  if(header)  header.style.display='';
+
+  var badge=document.getElementById('cal-badge-period');
+  if(badge) badge.textContent='Act: '+(C.refreshed_at||'—').substring(0,10);
+
+  // Cards de etapa E/V/G
+  var stepMap={};
+  (C.steps||[]).forEach(function(s){stepMap[s.step]=s;});
+  var stepCfg=[
+    {id:'cal-step-e',lbl:'EXHIBIDOS',key:'E',color:'#3483FA'},
+    {id:'cal-step-v',lbl:'VISITADOS',key:'V',color:'#F5A623'},
+    {id:'cal-step-g',lbl:'ITEMS CON GMV',key:'G',color:'#00A650'}
+  ];
+  var totE=(C.tot_exhib||0), totV=(C.tot_visit||0), totG=(C.tot_gmv_i||0);
+  var totArr=[totE,totV,totG];
+  stepCfg.forEach(function(sc,i){
+    var el=document.getElementById(sc.id); if(!el) return;
+    var s=stepMap[sc.key]||{};
+    var pct=i===0?'100%':i===1?(totE>0?(totV/totE*100).toFixed(1)+'% de exhibidos':'—'):(totV>0?(totG/totV*100).toFixed(1)+'% de visitados':'—');
+    el.style.borderTopColor=sc.color;
+    el.innerHTML='<div class="kpi-label">'+sc.lbl+'</div>'
+      +'<div class="kpi-val" style="color:'+sc.color+';font-size:20px">'+fNum(totArr[i])+'</div>'
+      +'<div class="kpi-sub">'+pct+'</div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:10px">'
+      +'<div style="background:#f5f5f5;border-radius:6px;padding:6px;text-align:center"><div style="font-size:12px;font-weight:700;color:'+sc.color+'">'+(s.avg_disc!=null?s.avg_disc.toFixed(1)+'%':'—')+'</div><div style="font-size:9px;color:#aaa;margin-top:2px">Dto. Pond.</div></div>'
+      +'<div style="background:#f5f5f5;border-radius:6px;padding:6px;text-align:center"><div style="font-size:12px;font-weight:700;color:'+sc.color+'">'+(s.riu_high_pct!=null?s.riu_high_pct.toFixed(1)+'%':'—')+'</div><div style="font-size:9px;color:#aaa;margin-top:2px">RIU High</div></div>'
+      +'<div style="background:#f5f5f5;border-radius:6px;padding:6px;text-align:center"><div style="font-size:12px;font-weight:700;color:'+sc.color+'">'+(s.con_oferta_pct!=null?s.con_oferta_pct.toFixed(1)+'%':'—')+'</div><div style="font-size:9px;color:#aaa;margin-top:2px">Con Oferta</div></div>'
+      +'</div>';
+  });
+
+  // Funnel tables
+  var avgV=C.camp_tasa_visita||0;
+  var avgC=totV>0?(totG/totV*100):0;
+  function buildFunnelTable(rows, containerId){
+    if(!rows||!rows.length){document.getElementById(containerId).innerHTML='<p style="color:#aaa;font-size:12px">Sin datos</p>';return;}
+    var h='<div class="table-card"><div class="table-wrap"><table><thead><tr>'
+      +'<th>Categoría</th><th style="text-align:right">Exhibidos</th><th style="text-align:center;width:60px"></th>'
+      +'<th style="text-align:right">Visitados</th><th style="text-align:center;width:60px"></th>'
+      +'<th style="text-align:right">Items GMV</th></tr></thead><tbody>';
+    rows.forEach(function(r){
+      var hiV=(r.pct_visita||0)>=avgV, hiC=(r.pct_conv||0)>=avgC;
+      var bg=(hiV&&hiC)?'#E8F5E9':'transparent';
+      var vCol=hiV?'#00A650':'#D32F2F', cCol=hiC?'#00A650':'#D32F2F';
+      h+='<tr style="background:'+bg+'">'
+        +'<td style="padding:8px 10px;font-weight:'+(hiV&&hiC?700:500)+'">'+r.categoria+'</td>'
+        +'<td style="text-align:right;padding:8px 10px">'+fNum(r.exhibidos)+'</td>'
+        +'<td style="text-align:center;padding:4px;font-size:11px;font-weight:700;color:'+vCol+'">'+(r.pct_visita||0).toFixed(1)+'%</td>'
+        +'<td style="text-align:right;padding:8px 10px">'+fNum(r.visitados)+'</td>'
+        +'<td style="text-align:center;padding:4px;font-size:11px;font-weight:700;color:'+cCol+'">'+(r.pct_conv||0).toFixed(1)+'%</td>'
+        +'<td style="text-align:right;padding:8px 10px">'+fNum(r.gmv_items)+'</td>'
+        +'</tr>';
+    });
+    h+='</tbody></table></div></div>';
+    document.getElementById(containerId).innerHTML=h;
+  }
+  buildFunnelTable(C.financiacion||[],'cal-tabla-fin');
+  buildFunnelTable(C.tipo_oferta||[],'cal-tabla-tipo');
+}
+
+// ──────────────────────────────────────────────
+// CALIDAD DE OFERTA — Tab Containers
+// ──────────────────────────────────────────────
+function renderCalidadContainers(){
+  var loading=document.getElementById('cal-cnt-loading');
+  var body=document.getElementById('cal-cnt-body');
+  if(!C||!C.refreshed_at){
+    if(loading) loading.style.display='';
+    if(body)    body.style.display='none';
+    return;
+  }
+  if(loading) loading.style.display='none';
+  if(body)    body.style.display='';
+
+  var badge=document.getElementById('cal-cnt-badge');
+  if(badge) badge.textContent=(C.containers||[]).length+' containers';
+
+  var cg=C.container_groups||{};
+  var bench=C.bench||{};
+  var totalNMV=(C.containers||[]).reduce(function(s,c){return s+(+c.NMV||0);},0);
+  var campTasa=C.camp_tasa_visita||0;
+
+  // Drill map
+  var drillMap={};
+  (C.drill||[]).forEach(function(r){
+    if(!drillMap[r.deal_container_id]) drillMap[r.deal_container_id]=[];
+    drillMap[r.deal_container_id].push(r);
+  });
+
+  function getDx(cvr,aspRango,tasaVis){
+    var b=bench[aspRango]||null;
+    var hiCVR=b!=null?cvr>=b:true, hiVis=tasaVis>=campTasa;
+    if(hiCVR&&hiVis) return {label:'OK',color:'#00A650',bg:'#E8F5E9',icon:'🟢'};
+    if(hiCVR&&!hiVis) return {label:'Revisar Exhibidos',color:'#3483FA',bg:'#E3F2FD',icon:'🔵'};
+    if(!hiCVR&&hiVis) return {label:'Revisar Oferta',color:'#F5A623',bg:'#FFF8E1',icon:'🟡'};
+    return {label:'Revisar / Excluir',color:'#D32F2F',bg:'#FFEBEE',icon:'🔴'};
+  }
+
+  var GROUP_ORDER=['FOCO','NO FOCO','TACTICO'];
+  var GROUP_COLOR={'FOCO':'#3483FA','NO FOCO':'#999','TACTICO':'#F5A623'};
+  var groups={'FOCO':[],'NO FOCO':[],'TACTICO':[],'SIN GRUPO':[]};
+  (C.containers||[]).forEach(function(c){
+    var g=cg[c.DEAL_CONTAINER_ID]||'SIN GRUPO';
+    if(!groups[g]) groups[g]=[];
+    groups[g].push(c);
+  });
+
+  var h='';
+  var allGroups=GROUP_ORDER.concat(['SIN GRUPO']);
+  allGroups.forEach(function(grp){
+    var rows=groups[grp];
+    if(!rows||!rows.length) return;
+    var color=GROUP_COLOR[grp]||'#aaa';
+    h+='<tr style="background:#f0f0f0;border-top:3px solid '+color+'">'
+      +'<td colspan="8" style="padding:9px 16px;font-size:11px;font-weight:800;color:#333;text-transform:uppercase;letter-spacing:.06em">'
+      +'<span style="color:'+color+'">▶</span> '+grp
+      +' <span style="font-weight:400;color:#999;margin-left:8px">'+rows.length+' containers</span>'
+      +'</td></tr>';
+    rows.forEach(function(c){
+      var tasaVis=c.SESIONES>0?(c.SESIONES>0?0:0):0; // placeholder - no tenemos exhibidos en cont_perf
+      var cvr=+(c.CVR||0);
+      var dx=getDx(cvr,c.ASP_RANGO||'Sin Rango',tasaVis);
+      var nmvShare=totalNMV>0?(+(c.NMV||0))/totalNMV*100:0;
+      var cvrCol=bench[c.ASP_RANGO]!=null?(cvr>=(bench[c.ASP_RANGO]||0)?'#00A650':'#D32F2F'):'#666';
+      var shortN=(c.CONTAINER_NAME||'').replace(/MKP DEMAND 5 5 ABRIL 2026\s*/i,'').trim();
+      h+='<tr style="background:'+dx.bg+';cursor:pointer" onclick="calToggleDrill(\''+c.DEAL_CONTAINER_ID+'\')">'
+        +'<td style="padding:9px 11px 9px 20px;font-weight:600">'+dx.icon+' <span title="'+c.CONTAINER_NAME+'">'+shortN.slice(0,44)+'</span></td>'
+        +'<td style="text-align:right;padding:9px 11px;font-weight:700;color:'+cvrCol+'">'+cvr.toFixed(2)+'%</td>'
+        +'<td style="text-align:right;padding:9px 11px">'+fNMV(+(c.NMV||0))+'</td>'
+        +'<td style="text-align:right;padding:9px 11px">'+nmvShare.toFixed(1)+'%</td>'
+        +'<td style="text-align:right;padding:9px 11px">'+fPct(+(c.DTO_POND||0)/100,1)+'</td>'
+        +'<td style="text-align:right;padding:9px 11px">'+fPct(+(c.RIU_PCT||0)/100,1)+'</td>'
+        +'<td style="text-align:right;padding:9px 11px">'+fNum(+(c.SESIONES||0))+'</td>'
+        +'<td style="padding:9px 11px"><span style="background:'+dx.color+';color:#fff;font-size:10px;font-weight:700;border-radius:4px;padding:2px 8px">'+dx.label+'</span></td>'
+        +'</tr>'
+        +'<tr id="cal-drill-'+c.DEAL_CONTAINER_ID+'" style="display:none">'
+        +'<td colspan="8" style="padding:0;background:#f8faff;border-bottom:2px solid #3483FA">'
+        +'<div style="padding:14px 24px 16px">'
+        +'<div style="display:flex;gap:8px;margin-bottom:10px">'
+        +'<button onclick="calShowDrillTab(\''+c.DEAL_CONTAINER_ID+'\',\'TIPO_OFERTA\',this)" class="pill active">Tipo Oferta</button>'
+        +'<button onclick="calShowDrillTab(\''+c.DEAL_CONTAINER_ID+'\',\'SEGMENTO\',this)" class="pill">Segmento</button>'
+        +'<button onclick="calShowDrillTab(\''+c.DEAL_CONTAINER_ID+'\',\'AGG3\',this)" class="pill">AGG3</button>'
+        +'</div>'
+        +'<div id="cal-drill-content-'+c.DEAL_CONTAINER_ID+'"></div>'
+        +'</div></td></tr>';
+    });
+  });
+  document.getElementById('cal-cnt-table-body').innerHTML=h;
+}
+
+function calBuildDrillTable(cid, dim){
+  var drillMap={};
+  (C.drill||[]).forEach(function(r){
+    if(!drillMap[r.deal_container_id]) drillMap[r.deal_container_id]=[];
+    drillMap[r.deal_container_id].push(r);
+  });
+  var rows=(drillMap[cid]||[]).filter(function(r){return r.dimension===dim&&r.exhibidos>0;});
+  rows.sort(function(a,b){return (b.gmv_items||0)-(a.gmv_items||0);});
+  if(!rows.length) return '<p style="color:#aaa;padding:8px;font-size:12px">Sin datos</p>';
+  var scores=rows.map(function(r){return (r.exhibidos>0?(r.visitados/r.exhibidos)*(r.gmv_items/Math.max(r.visitados,1)):0);});
+  var maxS=Math.max.apply(null,scores), minS=Math.min.apply(null,scores);
+  var h='<div class="table-card" style="margin-top:6px"><div class="table-wrap"><table>'
+    +'<thead><tr><th>Categoría</th><th style="text-align:right">Exhibidos</th>'
+    +'<th style="text-align:center;width:60px"></th><th style="text-align:right">Visitados</th>'
+    +'<th style="text-align:center;width:60px"></th><th style="text-align:right">Items GMV</th></tr></thead><tbody>';
+  rows.forEach(function(r,i){
+    var s=scores[i];
+    var isBest=s===maxS&&maxS>0, isWorst=s===minS&&rows.length>1&&minS!==maxS;
+    var bg=isBest?'#E8F5E9':isWorst?'#FFEBEE':'transparent';
+    var pV=r.exhibidos>0?(r.visitados/r.exhibidos*100).toFixed(1)+'%':'—';
+    var pC=r.visitados>0?(r.gmv_items/r.visitados*100).toFixed(1)+'%':'—';
+    var vCol=isBest?'#00A650':isWorst?'#D32F2F':'#666';
+    var badge=isBest?' <span style="font-size:9px;background:#00A650;color:#fff;border-radius:3px;padding:1px 5px">mejor</span>'
+             :isWorst?' <span style="font-size:9px;background:#D32F2F;color:#fff;border-radius:3px;padding:1px 5px">peor</span>':'';
+    h+='<tr style="background:'+bg+'">'
+      +'<td style="padding:7px 10px;font-weight:'+(isBest||isWorst?700:500)+'">'+r.categoria+badge+'</td>'
+      +'<td style="text-align:right;padding:7px 10px">'+fNum(r.exhibidos)+'</td>'
+      +'<td style="text-align:center;padding:4px;font-size:11px;font-weight:700;color:'+vCol+'">'+pV+'</td>'
+      +'<td style="text-align:right;padding:7px 10px">'+fNum(r.visitados)+'</td>'
+      +'<td style="text-align:center;padding:4px;font-size:11px;font-weight:700;color:'+vCol+'">'+pC+'</td>'
+      +'<td style="text-align:right;padding:7px 10px">'+fNum(r.gmv_items)+'</td>'
+      +'</tr>';
+  });
+  return h+'</tbody></table></div></div>';
+}
+
+function calToggleDrill(cid){
+  var row=document.getElementById('cal-drill-'+cid);
+  if(!row) return;
+  var isOpen=row.style.display!=='none';
+  if(CAL_OPEN_DRILL&&CAL_OPEN_DRILL!==cid){
+    var prev=document.getElementById('cal-drill-'+CAL_OPEN_DRILL);
+    if(prev) prev.style.display='none';
+  }
+  if(isOpen){row.style.display='none';CAL_OPEN_DRILL=null;return;}
+  row.style.display='';
+  CAL_OPEN_DRILL=cid;
+  var contentEl=document.getElementById('cal-drill-content-'+cid);
+  if(contentEl&&!contentEl.dataset.loaded){
+    contentEl.innerHTML=calBuildDrillTable(cid,'TIPO_OFERTA');
+    contentEl.dataset.dim='TIPO_OFERTA';
+    contentEl.dataset.loaded='1';
+  }
+}
+
+function calShowDrillTab(cid, dim, btn){
+  btn.parentNode.querySelectorAll('.pill').forEach(function(b){b.classList.remove('active');});
+  btn.classList.add('active');
+  var contentEl=document.getElementById('cal-drill-content-'+cid);
+  if(!contentEl) return;
+  contentEl.innerHTML=calBuildDrillTable(cid,dim);
+  contentEl.dataset.dim=dim;
 }
 
 load();
