@@ -99,6 +99,26 @@
     .cmp-table .metric-name{font-weight:600;color:#1a1a2e;}
     .dp{color:#4caf50;font-weight:600;}.dn{color:#e03131;font-weight:600;}
 
+    /* SUMMARY TAB */
+    .sum-section{background:#fff;border-radius:8px;border:1px solid #e8e8e8;padding:18px 16px;margin-bottom:20px;}
+    .sum-section-title{font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.6px;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+    .sum-tbl-wrap{overflow-x:auto;}
+    .sum-tbl-wrap table{min-width:100%;border-collapse:collapse;font-size:12px;}
+    .sum-tbl-wrap th{padding:8px 12px;background:#f8f8f8;color:#666;font-size:10px;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid #eee;text-align:right;white-space:nowrap;}
+    .sum-tbl-wrap th:first-child{text-align:left;}
+    .sum-tbl-wrap td{padding:8px 12px;border-bottom:1px solid #f5f5f5;vertical-align:top;}
+    .sum-tbl-wrap tr:hover td{background:#fafafa;}
+    .sum-tbl-wrap tr.sum-row-missing td{background:#fff8e1;}
+    .sum-cell{text-align:right;}
+    .sum-val{font-weight:600;color:#1a1a2e;}
+    .sum-deltas{margin-top:3px;display:flex;gap:5px;justify-content:flex-end;flex-wrap:wrap;}
+    .sum-ok{color:#2e7d32;font-size:10px;font-weight:600;}
+    .sum-warn{color:#e65100;font-size:10px;font-weight:600;}
+    .sum-bad{color:#c62828;font-size:10px;font-weight:600;}
+    .sum-hist-delta{color:#6a1b9a;font-size:10px;font-weight:600;}
+    .sum-date{font-size:12px;font-weight:700;color:#1a1a2e;white-space:nowrap;}
+    .sum-date-sub{font-weight:400;color:#aaa;font-size:11px;margin-left:4px;}
+
     /* LOADING */
     .loading{display:flex;justify-content:center;align-items:center;height:300px;font-size:14px;color:#888;}
 
@@ -125,7 +145,8 @@
 
 <!-- TABS NAV -->
 <div class="tabs-nav">
-  <button class="tab-btn active" onclick="switchTab('ms',this)">Main Slider</button>
+  <button class="tab-btn active" onclick="switchTab('summary',this)">Summary</button>
+  <button class="tab-btn" onclick="switchTab('ms',this)">Main Slider</button>
   <button class="tab-btn" onclick="switchTab('landing',this)">Landing</button>
   <button class="tab-btn" onclick="switchTab('container',this)">Containers</button>
 </div>
@@ -140,8 +161,13 @@
   <div id="loading" class="loading">Cargando datos...</div>
   <div id="content" style="display:none">
 
+    <!-- ==================== SUMMARY TAB ==================== -->
+    <div class="tab-panel active" id="panel-summary">
+      <div id="sum-content"></div>
+    </div>
+
     <!-- ==================== MS TAB ==================== -->
-    <div class="tab-panel active" id="panel-ms">
+    <div class="tab-panel" id="panel-ms">
       <div class="section-label">MAIN SLIDER <span class="badge" id="ms-badge-period">—</span></div>
 
       <div class="toggle-row" id="ms-toggles"></div>
@@ -254,7 +280,7 @@
 var D = { campaign:{name:'',start:'',end:''}, ms:[], landing:[], container:[],
           total_containers:[], total_site:[], historical:[], targets:{ms:{},landing:{},container:{}}, refreshed_at:'' };
 var CH = {};
-var ACTIVE_TAB = 'ms';
+var ACTIVE_TAB = 'summary';
 var LDG_FILTER = 'ALL';
 var CNT_VIEW   = 'container';
 var CMP_IDX    = '';
@@ -322,6 +348,7 @@ function switchTab(tab, btn){
 }
 
 function renderAll(){
+  if(ACTIVE_TAB==='summary')   renderSummary();
   if(ACTIVE_TAB==='ms')        renderMS();
   if(ACTIVE_TAB==='landing')   renderLanding();
   if(ACTIVE_TAB==='container') renderContainer();
@@ -360,6 +387,178 @@ function tgtLine(arr, tgtDates, dataDates){
   return result.some(function(v){return v!=null;})?result:null;
 }
 function tgtDS(data){ return {label:'Target',data:data,borderColor:'#aaa',borderDash:[6,4],backgroundColor:'transparent',tension:.3,pointRadius:2,borderWidth:1.5,fill:false}; }
+
+// ──────────────────────────────────────────────
+// SUMMARY
+// ──────────────────────────────────────────────
+function renderSummary(){
+  var el=document.getElementById('sum-content');
+  if(!el) return;
+
+  var campDates=(D.targets&&D.targets.dates)||[];
+  if(!campDates.length){
+    var dd={};
+    (D.ms||[]).forEach(function(r){dd[r.fecha]=1;});
+    (D.landing||[]).forEach(function(r){dd[r.date||r.DATE]=1;});
+    (D.container||[]).forEach(function(r){dd[r.date||r.DATE]=1;});
+    campDates=Object.keys(dd).sort();
+  }
+  var tgtDates=(D.targets&&D.targets.dates)||[];
+  var tgtMS=(D.targets&&D.targets.ms)||{};
+  var tgtLDG=(D.targets&&D.targets.landing)||{};
+  var tgtCNT=(D.targets&&D.targets.container)||{};
+
+  var hist=(CMP_IDX!==''&&(D.historical||[]).length)?D.historical[+CMP_IDX]:null;
+  var histName=hist?hist.name:'';
+
+  // ── MS PRINCIPAL ──
+  var msByDate={};
+  (D.ms||[]).filter(function(r){return getBucket(r.line_item)==='PRINCIPAL';}).forEach(function(r){
+    var d=r.fecha; if(!msByDate[d]) msByDate[d]={clicks:0,prints:0};
+    msByDate[d].clicks+=+r.clicks||0; msByDate[d].prints+=+r.prints||0;
+  });
+  var histMSByIdx={};
+  if(hist){
+    var hMSmap={}; var hMSdates=[];
+    (hist.ms||[]).filter(function(r){return getBucket(r.line_item)==='PRINCIPAL';}).forEach(function(r){
+      var d=r.fecha; if(!hMSmap[d]) hMSmap[d]={clicks:0,prints:0};
+      hMSmap[d].clicks+=+r.clicks||0; hMSmap[d].prints+=+r.prints||0;
+      if(hMSdates.indexOf(d)<0) hMSdates.push(d);
+    });
+    hMSdates.sort().forEach(function(d,i){histMSByIdx[i]=hMSmap[d];});
+  }
+
+  // ── LANDING ──
+  var ldgByDate={};
+  (D.landing||[]).forEach(function(r){
+    var d=r.date||r.DATE; if(!ldgByDate[d]) ldgByDate[d]={sessions:0,users_landing:0,users_container:0};
+    var b=ldgByDate[d]; b.sessions+=+r.sessions||0; b.users_landing+=+r.users_landing||0; b.users_container+=+r.users_container||0;
+  });
+  var tsMap={};
+  (D.total_site||[]).forEach(function(r){tsMap[r.date||r.DATE]=r;});
+  var histLDGByIdx={};
+  if(hist){
+    var hLDGmap={}; var hLDGdates=[];
+    (hist.landing||[]).forEach(function(r){
+      var d=r.date||r.DATE; if(!hLDGmap[d]) hLDGmap[d]={sessions:0,users_landing:0,users_container:0};
+      var b=hLDGmap[d]; b.sessions+=+r.sessions||0; b.users_landing+=+r.users_landing||0; b.users_container+=+r.users_container||0;
+      if(hLDGdates.indexOf(d)<0) hLDGdates.push(d);
+    });
+    hLDGdates.sort().forEach(function(d,i){histLDGByIdx[i]=hLDGmap[d];});
+  }
+
+  // ── CONTAINER ──
+  var cntByDate={};
+  (D.container||[]).forEach(function(r){
+    var d=r.date||r.DATE; if(!cntByDate[d]) cntByDate[d]={sessions:0,nmv:0,nsi:0,orders:0,transactions:0};
+    var b=cntByDate[d]; b.sessions+=+r.sessions||0; b.nmv+=+r.nmv||0; b.nsi+=+r.nsi||0; b.orders+=+r.orders||0; b.transactions+=+r.transactions||0;
+  });
+  var tcMap={};
+  (D.total_containers||[]).forEach(function(r){tcMap[r.date||r.DATE]=r;});
+  var histCNTByIdx={};
+  if(hist){
+    var hCNTmap={}; var hCNTdates=[];
+    (hist.container||[]).forEach(function(r){
+      var d=r.date||r.DATE; if(!hCNTmap[d]) hCNTmap[d]={sessions:0,nmv:0,nsi:0,orders:0,transactions:0};
+      var b=hCNTmap[d]; b.sessions+=+r.sessions||0; b.nmv+=+r.nmv||0; b.nsi+=+r.nsi||0; b.orders+=+r.orders||0; b.transactions+=+r.transactions||0;
+      if(hCNTdates.indexOf(d)<0) hCNTdates.push(d);
+    });
+    hCNTdates.sort().forEach(function(d,i){histCNTByIdx[i]=hCNTmap[d];});
+  }
+
+  // ── HELPERS ──
+  function tgtV(arr,idx){ return (arr&&idx>=0&&arr[idx]!=null)?arr[idx]:null; }
+
+  function deltaBadge(actual,tgtVal,histVal){
+    if(actual==null) return '';
+    var parts=[];
+    if(tgtVal!=null&&tgtVal!==0){
+      var pct=(actual-tgtVal)/tgtVal*100;
+      var cls=pct>=0?'sum-ok':pct>=-10?'sum-warn':'sum-bad';
+      parts.push('<span class="'+cls+'">'+(pct>=0?'▲':'▼')+Math.abs(pct).toFixed(1)+'% tgt</span>');
+    }
+    if(histVal!=null&&histVal!==0){
+      var pct2=(actual-histVal)/histVal*100;
+      var cls2=pct2>=0?'sum-ok':'sum-bad';
+      parts.push('<span class="'+cls2+' sum-hist-delta">'+(pct2>=0?'▲':'▼')+Math.abs(pct2).toFixed(1)+'% hist</span>');
+    }
+    return parts.length?'<div class="sum-deltas">'+parts.join('')+'</div>':'';
+  }
+
+  function cell(display,actual,tgtVal,histVal){
+    return '<td class="sum-cell"><div class="sum-val">'+(display!=null?display:'—')+'</div>'+deltaBadge(actual,tgtVal,histVal)+'</td>';
+  }
+
+  var histLabel=hist?(' vs <span style="color:#6a1b9a;font-size:10px;font-weight:600">'+histName+'</span>'):'';
+  var h='';
+
+  // ── MS PRINCIPAL ──
+  h+='<div class="sum-section">';
+  h+='<div class="sum-section-title">MAIN SLIDER — <span class="badge">PRINCIPAL</span>'+histLabel+'</div>';
+  h+='<div class="sum-tbl-wrap"><table><thead><tr><th style="text-align:left">Fecha</th><th>Prints</th><th>Clicks</th><th>CTR</th></tr></thead><tbody>';
+  campDates.forEach(function(d,i){
+    var ms=msByDate[d]; var hms=histMSByIdx[i]||null; var tgtIdx=tgtDates.indexOf(d);
+    var prints=ms?ms.prints:null; var clicks=ms?ms.clicks:null;
+    var ctr=(ms&&ms.prints>0)?ms.clicks/ms.prints:null;
+    var hCTR=(hms&&hms.prints>0)?hms.clicks/hms.prints:null;
+    h+='<tr'+((!ms)?' class="sum-row-missing"':'')+'>';
+    h+='<td class="sum-date">D'+(i+1)+' <span class="sum-date-sub">'+fDate(d)+'</span></td>';
+    h+=cell(prints!=null?fNum(prints):'—',prints,null,hms?hms.prints:null);
+    h+=cell(clicks!=null?fNum(clicks):'—',clicks,null,hms?hms.clicks:null);
+    h+=cell(ctr!=null?fPct(ctr,2):'—',ctr,tgtV(tgtMS.ctr,tgtIdx),hCTR);
+    h+='</tr>';
+  });
+  h+='</tbody></table></div></div>';
+
+  // ── LANDING ──
+  h+='<div class="sum-section">';
+  h+='<div class="sum-section-title">LANDING'+histLabel+'</div>';
+  h+='<div class="sum-tbl-wrap"><table><thead><tr><th style="text-align:left">Fecha</th><th>Sesiones</th><th>Share Sess</th><th>CTR</th></tr></thead><tbody>';
+  campDates.forEach(function(d,i){
+    var ldg=ldgByDate[d]; var hldg=histLDGByIdx[i]||null; var tgtIdx=tgtDates.indexOf(d); var ts=tsMap[d];
+    var sess=ldg?ldg.sessions:null;
+    var shareSess=(ldg&&ts&&+ts.ts_sessions>0)?ldg.sessions/+ts.ts_sessions:null;
+    var ctr=(ldg&&ldg.users_landing>0)?ldg.users_container/ldg.users_landing:null;
+    var hSess=hldg?hldg.sessions:null;
+    var hCTR=(hldg&&hldg.users_landing>0)?hldg.users_container/hldg.users_landing:null;
+    h+='<tr'+((!ldg)?' class="sum-row-missing"':'')+'>';
+    h+='<td class="sum-date">D'+(i+1)+' <span class="sum-date-sub">'+fDate(d)+'</span></td>';
+    h+=cell(sess!=null?fNum(sess):'—',sess,tgtV(tgtLDG.sessions,tgtIdx),hSess);
+    h+=cell(shareSess!=null?fPct(shareSess,2):'—',shareSess,tgtV(tgtLDG.share_sessions,tgtIdx),null);
+    h+=cell(ctr!=null?fPct(ctr,2):'—',ctr,tgtV(tgtLDG.ctr,tgtIdx),hCTR);
+    h+='</tr>';
+  });
+  h+='</tbody></table></div></div>';
+
+  // ── CONTAINER ──
+  h+='<div class="sum-section">';
+  h+='<div class="sum-section-title">CONTAINERS'+histLabel+'</div>';
+  h+='<div class="sum-tbl-wrap"><table><thead><tr><th style="text-align:left">Fecha</th><th>Sesiones</th><th>Share Sess</th><th>NMV</th><th>Share NMV</th><th>NSI</th><th>NASP</th><th>CVR</th></tr></thead><tbody>';
+  campDates.forEach(function(d,i){
+    var cnt=cntByDate[d]; var hcnt=histCNTByIdx[i]||null; var tgtIdx=tgtDates.indexOf(d); var tc=tcMap[d];
+    var sess=cnt?cnt.sessions:null; var nmv=cnt?cnt.nmv:null; var nsi=cnt?cnt.nsi:null;
+    var nasp=(cnt&&cnt.orders>0)?cnt.nmv/cnt.orders:null;
+    var cvr=(cnt&&cnt.sessions>0)?cnt.orders/cnt.sessions:null;
+    var shareSess=(cnt&&tc&&+tc.total_sessions>0)?cnt.sessions/+tc.total_sessions:null;
+    var shareNMV=(cnt&&tc&&+tc.total_nmv>0)?cnt.nmv/+tc.total_nmv:null;
+    var hSess=hcnt?hcnt.sessions:null; var hNMV=hcnt?hcnt.nmv:null; var hNSI=hcnt?hcnt.nsi:null;
+    var hNASP=(hcnt&&hcnt.orders>0)?hcnt.nmv/hcnt.orders:null;
+    var hCVR=(hcnt&&hcnt.sessions>0)?hcnt.orders/hcnt.sessions:null;
+    h+='<tr'+((!cnt)?' class="sum-row-missing"':'')+'>';
+    h+='<td class="sum-date">D'+(i+1)+' <span class="sum-date-sub">'+fDate(d)+'</span></td>';
+    h+=cell(sess!=null?fNum(sess):'—',sess,tgtV(tgtCNT.sessions,tgtIdx),hSess);
+    h+=cell(shareSess!=null?fPct(shareSess,2):'—',shareSess,tgtV(tgtCNT.share_sessions,tgtIdx),null);
+    h+=cell(nmv!=null?fNMV(nmv):'—',nmv,tgtV(tgtCNT.nmv,tgtIdx),hNMV);
+    h+=cell(shareNMV!=null?fPct(shareNMV,2):'—',shareNMV,tgtV(tgtCNT.share_nmv,tgtIdx),null);
+    h+=cell(nsi!=null?fNum(nsi):'—',nsi,tgtV(tgtCNT.nsi,tgtIdx),hNSI);
+    h+=cell(nasp!=null?fNMV(nasp):'—',nasp,tgtV(tgtCNT.nasp,tgtIdx),hNASP);
+    h+=cell(cvr!=null?fPct(cvr,2):'—',cvr,tgtV(tgtCNT.cvr,tgtIdx),hCVR);
+    h+='</tr>';
+  });
+  h+='</tbody></table></div></div>';
+
+  el.innerHTML=h;
+}
 
 // ──────────────────────────────────────────────
 // MAIN SLIDER
