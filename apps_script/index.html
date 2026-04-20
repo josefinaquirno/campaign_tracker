@@ -407,6 +407,23 @@ function renderMS(){
 
   var tgt = (D.targets&&D.targets.ms)||{};
 
+  // Historical comparison totals
+  var histTot={clicks:0,prints:0,ctr:0}, histName='';
+  if(CMP_IDX!==''&&(D.historical||[]).length){
+    var histCmp=D.historical[+CMP_IDX];
+    histName=histCmp.name||'';
+    (histCmp.ms||[]).forEach(function(r){histTot.clicks+=+r.clicks||0; histTot.prints+=+r.prints||0;});
+    histTot.ctr=histTot.prints>0?histTot.clicks/histTot.prints:0;
+  }
+  var hasHist=histName!==''&&histTot.prints>0;
+
+  function histDelta(cur,ref){
+    if(!hasHist||ref==null||ref===0||cur==null) return '';
+    var pct=(cur-ref)/ref*100;
+    var cls=pct>=0?'ok':'bad';
+    return '<div class="kpi-target '+cls+'">'+(pct>=0?'▲ ':'▼ ')+Math.abs(pct).toFixed(1)+'% vs '+histName+'</div>';
+  }
+
   // Segmentation KPIs
   var segSeg={clicks:0,prints:0,lis:{}}, segAll={lis:{}};
   filtered.forEach(function(r){
@@ -422,9 +439,9 @@ function renderMS(){
 
   // KPIs
   var kpiCfg = [
-    {lbl:'CLICKS (TOTAL)',  val:fNum(tot.clicks),    sub:'Acumulado campaña', tgtKey:null},
-    {lbl:'PRINTS (TOTAL)',  val:fNum(tot.prints),    sub:'Viewed prints acumulados', tgtKey:null},
-    {lbl:'CTR',             val:fPct(tot.ctr,2),     sub:'Clicks / Prints', tgtKey:'ctr', raw:tot.ctr},
+    {lbl:'CLICKS (TOTAL)',  val:fNum(tot.clicks),    sub:'Acumulado campaña', tgtKey:null, hCur:tot.clicks, hRef:histTot.clicks},
+    {lbl:'PRINTS (TOTAL)',  val:fNum(tot.prints),    sub:'Viewed prints acumulados', tgtKey:null, hCur:tot.prints, hRef:histTot.prints},
+    {lbl:'CTR',             val:fPct(tot.ctr,2),     sub:'Clicks / Prints', tgtKey:'ctr', raw:tot.ctr, hCur:tot.ctr, hRef:histTot.ctr},
     {lbl:'% PRINTS SEG.',   val:pctPrintsSeg!=null?fPct(pctPrintsSeg,2):'—', sub:'Prints segmentados / total', tgtKey:null},
     {lbl:'CTR SEGMENTADO',  val:ctrSeg!=null?fPct(ctrSeg,2):'—',             sub:'Clicks / Prints (seg.)', tgtKey:null},
     {lbl:'% MS SEGMENTADOS',val:pctLISeg!=null?fPct(pctLISeg,2):'—',         sub:segLIs+' de '+totalLIs+' line items', tgtKey:null}
@@ -437,7 +454,7 @@ function renderMS(){
       var tClass = pct>=0?'ok':pct>=-10?'warn':'bad';
       tgtStr = '<div class="kpi-target '+tClass+'">'+(pct>=0?'▲ ':'▼ ')+Math.abs(pct).toFixed(1)+'% vs target '+fPct(tgt[k.tgtKey],2)+'</div>';
     }
-    return '<div class="kpi-card '+cls+'"><div class="kpi-label">'+k.lbl+'</div><div class="kpi-val">'+k.val+'</div><div class="kpi-sub">'+k.sub+'</div>'+tgtStr+'</div>';
+    return '<div class="kpi-card '+cls+'"><div class="kpi-label">'+k.lbl+'</div><div class="kpi-val">'+k.val+'</div><div class="kpi-sub">'+k.sub+'</div>'+tgtStr+histDelta(k.hCur,k.hRef)+'</div>';
   }).join('');
 
   // Charts — daily CTR & volume
