@@ -804,104 +804,128 @@ function renderInlineComparison(placement, containerId){
 
   var hist=D.historical[+CMP_IDX];
   var curName=(D.campaign&&D.campaign.name)||'Actual';
+  var tgtPl=(D.targets&&D.targets[placement])||{};
+  var tgtDatesArr=(D.targets&&D.targets.dates)||[];
 
-  // Determine sources
-  var curSrc  = placement==='ms' ? D.ms       : placement==='landing' ? D.landing       : D.container;
-  var histSrc = placement==='ms' ? hist.ms     : placement==='landing' ? hist.landing     : hist.container;
+  var curSrc  = placement==='ms'?D.ms      :placement==='landing'?D.landing      :D.container;
+  var histSrc = placement==='ms'?hist.ms   :placement==='landing'?hist.landing    :hist.container;
 
-  // Aggregate by date → sort → daily arrays aligned by day index
   var curMap  = cmpAggByDate(curSrc);
   var histMap = cmpAggByDate(histSrc);
   var curDates  = Object.keys(curMap).sort();
   var histDates = Object.keys(histMap).sort();
   var days = Math.max(curDates.length, histDates.length);
 
-  // Build per-day row objects
   function buildRows(dates, map, isMS){
     return dates.map(function(d){
       var b=map[d];
-      if(isMS) return {clicks:b.clicks, prints:b.prints, ctr:b.prints>0?b.clicks/b.prints:0};
-      return {sessions:b.sessions, nmv:b.nmv, orders:b.orders, buyers:b.buyers,
-              cvr:b.sessions>0?b.orders/b.sessions:0, nasp:b.orders>0?b.nmv/b.orders:0,
+      if(isMS) return {clicks:b.clicks,prints:b.prints,ctr:b.prints>0?b.clicks/b.prints:0};
+      return {sessions:b.sessions,nmv:b.nmv,orders:b.orders,buyers:b.buyers,
+              cvr:b.sessions>0?b.orders/b.sessions:0,nasp:b.orders>0?b.nmv/b.orders:0,
               nsit:b.transactions>0?b.nsi/b.transactions:0};
     });
   }
 
-  var isMS = placement==='ms';
-  var curRows  = buildRows(curDates,  curMap,  isMS);
-  var histRows = buildRows(histDates, histMap, isMS);
+  var isMS=placement==='ms';
+  var curRows  = buildRows(curDates, curMap, isMS);
+  var histRows = buildRows(histDates,histMap,isMS);
 
-  // Column definitions per placement
+  // tgtKey: key in D.targets[placement] that holds the daily target array for this metric
   var colDefs = isMS
-    ? [{l:'Clicks',  kc:'clicks',  fmt:fNum,                  rate:false},
-       {l:'Prints',  kc:'prints',  fmt:fNum,                  rate:false},
-       {l:'CTR',     kc:'ctr',     fmt:function(v){return fPct(v,3);}, rate:true}]
-    : [{l:'Sessions',kc:'sessions',fmt:fNum,                  rate:false},
-       {l:'NMV',     kc:'nmv',     fmt:fNMV,                  rate:false},
-       {l:'Orders',  kc:'orders',  fmt:fNum,                  rate:false},
-       {l:'Buyers',  kc:'buyers',  fmt:fNum,                  rate:false},
-       {l:'CVR',     kc:'cvr',     fmt:function(v){return fPct(v,3);}, rate:true},
-       {l:'NASP',    kc:'nasp',    fmt:fNMV,                  rate:false},
-       {l:'NSI/T',   kc:'nsit',    fmt:function(v){return v?v.toFixed(2):'—';}, rate:false}];
+    ? [{l:'Clicks', kc:'clicks', fmt:fNum,                           rate:false, tgtKey:null},
+       {l:'Prints', kc:'prints', fmt:fNum,                           rate:false, tgtKey:null},
+       {l:'CTR',    kc:'ctr',    fmt:function(v){return fPct(v,3);}, rate:true,  tgtKey:'ctr'}]
+    : [{l:'Sessions',kc:'sessions',fmt:fNum,                          rate:false, tgtKey:'sessions'},
+       {l:'NMV',    kc:'nmv',    fmt:fNMV,                           rate:false, tgtKey:placement==='container'?'nmv':null},
+       {l:'Orders', kc:'orders', fmt:fNum,                           rate:false, tgtKey:null},
+       {l:'Buyers', kc:'buyers', fmt:fNum,                           rate:false, tgtKey:null},
+       {l:'CVR',    kc:'cvr',    fmt:function(v){return fPct(v,3);}, rate:true,  tgtKey:placement==='container'?'cvr':null},
+       {l:'NASP',   kc:'nasp',   fmt:fNMV,                           rate:false, tgtKey:null},
+       {l:'NSI/T',  kc:'nsit',   fmt:function(v){return v?v.toFixed(2):'—';},rate:false,tgtKey:null}];
 
-  // Chart data: CTR for MS, Sessions for landing/container
-  var chartKey   = isMS ? 'ctr'      : 'sessions';
-  var chartLabel = isMS ? 'CTR (%)'  : 'Sesiones';
-  var chartSfx   = isMS ? '%'        : '';
-  var chartMult  = isMS ? 100        : 1;
-  var chartDec   = isMS ? 3          : 0;
-  var chartId    = 'cCMP_'+placement+'_'+CMP_IDX;
-  var dayLabels  = Array.from({length:days}, function(_,i){ return 'D'+(i+1); });
+  var chartKey=isMS?'ctr':'sessions';
+  var chartLabel=isMS?'CTR (%)':'Sesiones';
+  var chartSfx=isMS?'%':'';
+  var chartMult=isMS?100:1;
+  var chartDec=isMS?3:0;
+  var chartId='cCMP_'+placement+'_'+CMP_IDX;
+  var dayLabels=Array.from({length:days},function(_,i){return 'D'+(i+1);});
 
-  // Build HTML
   var h='<div class="cmp-inline">';
-  h+='<div class="cmp-inline-title">COMPARACIÓN DÍA A DÍA VS <span class="badge">'+hist.name+'</span></div>';
+  h+='<div class="cmp-inline-title">COMPARACIÓN DÍA A DÍA <span class="badge">'+hist.name+'</span> + TARGETS</div>';
 
-  // Chart card
+  // Chart
   h+='<div class="chart-card" style="margin-bottom:14px">';
   h+='<div class="chart-title">'+chartLabel+' — día a día</div>';
-  h+='<div class="chart-sub">'+curName+' (sólido) vs '+hist.name+' (punteado) · D1 = primer día activo de cada campaña</div>';
+  h+='<div class="chart-sub">'+curName+' (amarillo) · Target (gris) · '+hist.name+' (violeta) · D1 = primer día activo</div>';
   h+='<div class="chart-wrap"><canvas id="'+chartId+'"></canvas></div>';
   h+='</div>';
 
-  // Table
+  // Table — columns: Actual | [Target | Δ Tgt] | Hist | Δ Hist (target cols only when data exists)
   h+='<div class="cmp-table-wrap"><table class="cmp-table"><thead><tr><th>Día</th>';
   colDefs.forEach(function(c){
+    var hasTgt=c.tgtKey&&Array.isArray(tgtPl[c.tgtKey])&&tgtPl[c.tgtKey].length>0;
     h+='<th>'+c.l+'<br><small style="font-weight:400;color:#aaa;font-size:9px">'+curName+'</small></th>';
-    h+='<th>'+c.l+'<br><small style="font-weight:400;color:#aaa;font-size:9px">'+hist.name+'</small></th>';
-    h+='<th style="min-width:48px">Δ</th>';
+    if(hasTgt){
+      h+='<th>'+c.l+'<br><small style="font-weight:400;color:#2e7d32;font-size:9px">Target</small></th>';
+      h+='<th style="min-width:44px">Δ Tgt</th>';
+    }
+    h+='<th>'+c.l+'<br><small style="font-weight:400;color:#9B59B6;font-size:9px">'+hist.name+'</small></th>';
+    h+='<th style="min-width:44px">Δ Hist</th>';
   });
   h+='</tr></thead><tbody>';
 
   for(var i=0;i<days;i++){
-    var c=curRows[i]||{}, hh=histRows[i]||{};
+    var curR=curRows[i]||{}, histR=histRows[i]||{};
+    var tgtIdx=i<curDates.length?tgtDatesArr.indexOf(curDates[i]):-1;
     h+='<tr><td class="metric-name" style="white-space:nowrap">D'+(i+1)+'</td>';
     colDefs.forEach(function(col){
-      var cv=c[col.kc], hv=hh[col.kc];
-      var d=deltaStr(cv,hv,col.rate), dc=deltaClass(cv,hv);
+      var cv=curR[col.kc], hv=histR[col.kc];
+      var hasTgt=col.tgtKey&&Array.isArray(tgtPl[col.tgtKey])&&tgtPl[col.tgtKey].length>0;
+      var tv=hasTgt&&tgtIdx>=0?tgtPl[col.tgtKey][tgtIdx]:null;
       h+='<td>'+col.fmt(cv)+'</td>';
-      h+='<td style="color:#aaa">'+col.fmt(hv)+'</td>';
-      h+='<td class="'+dc+'">'+d+'</td>';
+      if(hasTgt){
+        var dTgt=tv!=null?deltaStr(cv,tv,col.rate):'—';
+        var dcTgt=tv!=null?deltaClass(cv,tv):'';
+        h+='<td style="color:#2e7d32">'+col.fmt(tv)+'</td>';
+        h+='<td class="'+dcTgt+'">'+dTgt+'</td>';
+      }
+      h+='<td style="color:#9B59B6">'+col.fmt(hv)+'</td>';
+      h+='<td class="'+deltaClass(cv,hv)+'">'+deltaStr(cv,hv,col.rate)+'</td>';
     });
     h+='</tr>';
   }
   h+='</tbody></table></div></div>';
   el.innerHTML=h;
 
-  // Render chart after DOM
   setTimeout(function(){
-    var curVals  = Array.from({length:days},function(_,i){ var r=curRows[i];  return r?+(r[chartKey]*chartMult).toFixed(chartDec):null; });
-    var histVals = Array.from({length:days},function(_,i){ var r=histRows[i]; return r?+(r[chartKey]*chartMult).toFixed(chartDec):null; });
+    var curVals =Array.from({length:days},function(_,i){var r=curRows[i]; return r?+(r[chartKey]*chartMult).toFixed(chartDec):null;});
+    var histVals=Array.from({length:days},function(_,i){var r=histRows[i];return r?+(r[chartKey]*chartMult).toFixed(chartDec):null;});
+
+    // Target line: map each current-campaign day to its calendar date → target array index
+    var chartTgtArr=tgtPl[chartKey];
+    var tgtVals=null;
+    if(chartTgtArr&&Array.isArray(chartTgtArr)&&chartTgtArr.length>0){
+      tgtVals=Array.from({length:days},function(_,i){
+        var ti=i<curDates.length?tgtDatesArr.indexOf(curDates[i]):-1;
+        return ti>=0?+(chartTgtArr[ti]*chartMult).toFixed(chartDec):null;
+      });
+    }
+
     if(CH[chartId]) CH[chartId].destroy();
     var opts=JSON.parse(JSON.stringify(BASE_OPTS));
     if(chartSfx) opts.scales.y.ticks.callback=function(v){return v+chartSfx;};
+    var datasets=[
+      {label:curName,   data:curVals,  borderColor:'#FFE600',backgroundColor:'rgba(255,230,0,0.1)',fill:true, tension:.3,pointRadius:4,borderWidth:2}
+    ];
+    if(tgtVals) datasets.push(
+      {label:'Target',  data:tgtVals,  borderColor:'#aaa',   backgroundColor:'transparent',       fill:false,tension:.3,pointRadius:2,borderWidth:1.5,borderDash:[6,4]}
+    );
+    datasets.push(
+      {label:hist.name, data:histVals, borderColor:'#9B59B6',backgroundColor:'transparent',       fill:false,tension:.3,pointRadius:4,borderWidth:2, borderDash:[5,4]}
+    );
     CH[chartId]=new Chart(document.getElementById(chartId).getContext('2d'),{
-      type:'line',
-      data:{labels:dayLabels,datasets:[
-        {label:curName, data:curVals,  borderColor:'#FFE600',backgroundColor:'rgba(255,230,0,0.1)',fill:true, tension:.3,pointRadius:4,borderWidth:2},
-        {label:hist.name,data:histVals,borderColor:'#9B59B6',backgroundColor:'transparent',         fill:false,tension:.3,pointRadius:4,borderWidth:2,borderDash:[5,4]}
-      ]},
-      options:opts
+      type:'line',data:{labels:dayLabels,datasets:datasets},options:opts
     });
   },50);
 }
