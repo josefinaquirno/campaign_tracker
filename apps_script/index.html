@@ -293,6 +293,7 @@ var CMP_IDX    = '';
 var SORT_COL   = { ms:'clicks', ldg:'sessions', cnt:'sessions' };
 var SORT_ASC   = { ms:false, ldg:false, cnt:false };
 var MS_BUCKET  = 'ALL';
+var SUM_MS_FILTER = 'PRINCIPAL';
 
 var C1='#FFE600', C2='#1a1a2e', C3='#4caf50', C4='#e03131', C5='#2196F3', C6='#FF9800';
 var PALETTE=['#FFE600','#1a1a2e','#4caf50','#2196F3','#FF9800','#9C27B0','#00BCD4','#FF5722','#607D8B','#E91E63'];
@@ -419,14 +420,20 @@ function renderSummary(){
 
   // ── MS PRINCIPAL ──
   var msByDate={};
-  (D.ms||[]).filter(function(r){return getBucket(r.line_item)==='PRINCIPAL';}).forEach(function(r){
+  (D.ms||[]).filter(function(r){
+    if(SUM_MS_FILTER==='PRINCIPAL') return getBucket(r.line_item)==='PRINCIPAL';
+    return getMSSubBucket(r.line_item)===SUM_MS_FILTER;
+  }).forEach(function(r){
     var d=r.fecha; if(!msByDate[d]) msByDate[d]={clicks:0,prints:0};
     msByDate[d].clicks+=+r.clicks||0; msByDate[d].prints+=+r.prints||0;
   });
   var histMSByIdx={};
   if(hist){
     var hMSmap={}; var hMSdates=[];
-    (hist.ms||[]).filter(function(r){return getBucket(r.line_item)==='PRINCIPAL';}).forEach(function(r){
+    (hist.ms||[]).filter(function(r){
+      if(SUM_MS_FILTER==='PRINCIPAL') return getBucket(r.line_item)==='PRINCIPAL';
+      return getMSSubBucket(r.line_item)===SUM_MS_FILTER;
+    }).forEach(function(r){
       var d=r.fecha; if(!hMSmap[d]) hMSmap[d]={clicks:0,prints:0};
       hMSmap[d].clicks+=+r.clicks||0; hMSmap[d].prints+=+r.prints||0;
       if(hMSdates.indexOf(d)<0) hMSdates.push(d);
@@ -528,9 +535,9 @@ function renderSummary(){
   }
 
   // buildTable: metrics as rows, days as columns
-  function buildTable(title, metrics){
+  function buildTable(title, metrics, headerWidget){
     var N=campDates.length;
-    var h='<div class="sum-section"><div class="sum-tbl-wrap"><table>';
+    var h='<div class="sum-section">'+(headerWidget?'<div style="padding:12px 16px 0">'+headerWidget+'</div>':'')+'<div class="sum-tbl-wrap"><table>';
     // Header
     h+='<thead><tr><th class="sum-hdr-metric">'+title+'</th>';
     campDates.forEach(function(d,i){h+='<th>D'+(i+1)+'<br><span style="font-weight:400;font-size:9px;text-transform:none">'+fDate(d)+'</span></th>';});
@@ -569,11 +576,18 @@ function renderSummary(){
   }
 
   var p2=function(v){return fPct(v,2);};
-  var html=buildTable('MAIN SLIDER — PRINCIPAL',[
+  var msLabel={'PRINCIPAL':'PRINCIPAL (total)','celebrity':'Celebrity','tachado':'Tachado'};
+  var msDropdown='<div style="display:flex;align-items:center;gap:8px"><label style="font-size:11px;color:#888;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Ver:</label>'
+    +'<select onchange="setSumMSFilter(this.value)" style="border:1px solid #ddd;border-radius:6px;padding:4px 10px;font-size:11px;color:#333;cursor:pointer">'
+    +'<option value="PRINCIPAL"'+(SUM_MS_FILTER==='PRINCIPAL'?' selected':'')+'>PRINCIPAL (total)</option>'
+    +'<option value="celebrity"'+(SUM_MS_FILTER==='celebrity'?' selected':'')+'>Celebrity</option>'
+    +'<option value="tachado"'+(SUM_MS_FILTER==='tachado'?' selected':'')+'>Tachado</option>'
+    +'</select></div>';
+  var html=buildTable('MAIN SLIDER — '+(msLabel[SUM_MS_FILTER]||SUM_MS_FILTER),[
     {label:'Prints',  vals:msPrints, total:totMSP||null,  fmt:fNum, tgt:null,      hvals:hist?hMSPrints:null, htotal:totHMSP||null},
     {label:'Clicks',  vals:msClicks, total:totMSC||null,  fmt:fNum, tgt:null,      hvals:hist?hMSClicks:null, htotal:totHMSC||null},
     {label:'CTR',     vals:msCTR,    total:totMSP>0?totMSC/totMSP:null, fmt:p2,   tgt:tgtMS.ctr, hvals:hist?hMSCTR:null, htotal:totHMSP>0?totHMSC/totHMSP:null}
-  ]);
+  ], msDropdown);
 
   html+=buildTable('LANDING',[
     {label:'Sesiones',       vals:ldgSess,  total:totLSess,               fmt:fNum, tgt:tgtLDG.sessions,       hvals:hist?hLDGSess:null, htotal:totHLSess||null},
@@ -1055,6 +1069,8 @@ function buildCmpBar(){
 }
 
 function setCmpCampaign(idx){ CMP_IDX=idx; renderAll(); }
+function setSumMSFilter(v){ SUM_MS_FILTER=v; renderSummary(); }
+function getMSSubBucket(li){ var l=(li||'').toLowerCase(); if(l.indexOf('tachado')>=0)return 'tachado'; if(l.indexOf('celebrity')>=0)return 'celebrity'; return 'principal'; }
 
 // Aggregate an array of daily rows into { date: aggregatedObj }
 function cmpAggByDate(arr){
