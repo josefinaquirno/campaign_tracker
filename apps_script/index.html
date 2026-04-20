@@ -407,13 +407,27 @@ function renderMS(){
 
   var tgt = (D.targets&&D.targets.ms)||{};
 
+  // Segmentation KPIs
+  var segSeg={clicks:0,prints:0,lis:{}}, segAll={lis:{}};
+  filtered.forEach(function(r){
+    var isSeg=(r.segmentation==='SEGMENTADO');
+    if(isSeg){segSeg.clicks+=+r.clicks||0; segSeg.prints+=+r.prints||0; segSeg.lis[r.line_item]=1;}
+    segAll.lis[r.line_item]=1;
+  });
+  var pctPrintsSeg = tot.prints>0 ? segSeg.prints/tot.prints : null;
+  var ctrSeg = segSeg.prints>0 ? segSeg.clicks/segSeg.prints : null;
+  var totalLIs = Object.keys(segAll.lis).length;
+  var segLIs = Object.keys(segSeg.lis).length;
+  var pctLISeg = totalLIs>0 ? segLIs/totalLIs : null;
+
   // KPIs
   var kpiCfg = [
     {lbl:'CLICKS (TOTAL)',  val:fNum(tot.clicks),    sub:'Acumulado campaña', tgtKey:null},
     {lbl:'PRINTS (TOTAL)',  val:fNum(tot.prints),    sub:'Viewed prints acumulados', tgtKey:null},
-    {lbl:'CTR',             val:fPct(tot.ctr,3),     sub:'Clicks / Prints', tgtKey:'ctr', raw:tot.ctr},
-    {lbl:'CLICKS (ÚLTIMO DÍA)', val:fNum((byDate[lastDate]||{}).clicks), sub:lastDate, tgtKey:null},
-    {lbl:'CTR (ÚLTIMO DÍA)',    val:fPct(byDate[lastDate]&&byDate[lastDate].prints>0?byDate[lastDate].clicks/byDate[lastDate].prints:null,3), sub:'Solo '+fDate(lastDate), tgtKey:'ctr', raw:byDate[lastDate]&&byDate[lastDate].prints>0?byDate[lastDate].clicks/byDate[lastDate].prints:null}
+    {lbl:'CTR',             val:fPct(tot.ctr,2),     sub:'Clicks / Prints', tgtKey:'ctr', raw:tot.ctr},
+    {lbl:'% PRINTS SEG.',   val:pctPrintsSeg!=null?fPct(pctPrintsSeg,2):'—', sub:'Prints segmentados / total', tgtKey:null},
+    {lbl:'CTR SEGMENTADO',  val:ctrSeg!=null?fPct(ctrSeg,2):'—',             sub:'Clicks / Prints (seg.)', tgtKey:null},
+    {lbl:'% MS SEGMENTADOS',val:pctLISeg!=null?fPct(pctLISeg,2):'—',         sub:segLIs+' de '+totalLIs+' line items', tgtKey:null}
   ];
   document.getElementById('ms-kpis').innerHTML = kpiCfg.map(function(k){
     var tgtStr='', cls='';
@@ -421,13 +435,13 @@ function renderMS(){
       var pct=(k.raw-tgt[k.tgtKey])/tgt[k.tgtKey]*100;
       cls = pct>=0?'vs-target-ok':pct>=-10?'vs-target-warn':'vs-target-bad';
       var tClass = pct>=0?'ok':pct>=-10?'warn':'bad';
-      tgtStr = '<div class="kpi-target '+tClass+'">'+(pct>=0?'▲ ':'▼ ')+Math.abs(pct).toFixed(1)+'% vs target '+fPct(tgt[k.tgtKey],3)+'</div>';
+      tgtStr = '<div class="kpi-target '+tClass+'">'+(pct>=0?'▲ ':'▼ ')+Math.abs(pct).toFixed(1)+'% vs target '+fPct(tgt[k.tgtKey],2)+'</div>';
     }
     return '<div class="kpi-card '+cls+'"><div class="kpi-label">'+k.lbl+'</div><div class="kpi-val">'+k.val+'</div><div class="kpi-sub">'+k.sub+'</div>'+tgtStr+'</div>';
   }).join('');
 
   // Charts — daily CTR & volume
-  var ctrData = dates.map(function(d){ var r=byDate[d]; return r.prints>0?+(r.clicks/r.prints*100).toFixed(3):0; });
+  var ctrData = dates.map(function(d){ var r=byDate[d]; return r.prints>0?+(r.clicks/r.prints*100).toFixed(2):0; });
   var clkData = dates.map(function(d){ return byDate[d].clicks; });
   var prtData = dates.map(function(d){ return byDate[d].prints; });
   var lbls    = dates.map(fDate);
@@ -458,7 +472,7 @@ function renderMS(){
   lis.forEach(function(li){
     h+='<tr>'+cols.map(function(c){
       if(c.k==='bucket') return '<td><span style="background:'+(BUCKET_COLOR[li.bucket]||'#aaa')+';color:#fff;padding:2px 7px;border-radius:3px;font-size:10px;font-weight:700">'+li.bucket+'</span></td>';
-      return '<td>'+(c.rate?fPct(li[c.k],3):c.num?fNum(li[c.k]):li[c.k])+'</td>';
+      return '<td>'+(c.rate?fPct(li[c.k],2):c.num?fNum(li[c.k]):li[c.k])+'</td>';
     }).join('')+'</tr>';
   });
   h+='</tbody></table>';
@@ -537,14 +551,14 @@ function renderLanding(){
   var kpiCfg = [
     {lbl:'SESIONES',     val:fNum(tot.sessions),    sub:'Acumuladas', raw:tot.sessions, tgtKey:'sessions'},
     {lbl:'NMV (USD)',    val:fNMV(tot.nmv),          sub:'168hs atrib.', raw:tot.nmv, tgtKey:'nmv'},
-    {lbl:'CTR',          val:fPct(tot.ctr,3),        sub:'Users container / Users landing', raw:tot.ctr, tgtKey:null},
-    {lbl:'CVR',          val:fPct(tot.cvr,3),        sub:'Orders / Sessions', raw:tot.cvr, tgtKey:'cvr'},
+    {lbl:'CTR',          val:fPct(tot.ctr,2),        sub:'Users container / Users landing', raw:tot.ctr, tgtKey:null},
+    {lbl:'CVR',          val:fPct(tot.cvr,2),        sub:'Orders / Sessions', raw:tot.cvr, tgtKey:'cvr'},
     {lbl:'NASP',         val:fNMV(tot.nasp),         sub:'NMV / Orders', raw:null, tgtKey:null},
     {lbl:'NSI/T',        val:tot.nsit?tot.nsit.toFixed(2):'—', sub:'NSI / Transactions', raw:null, tgtKey:null},
     {lbl:'ORDERS',       val:fNum(tot.orders),       sub:'Acumuladas', raw:null, tgtKey:null},
     {lbl:'BUYERS',       val:fNum(tot.buyers),       sub:'Únicos', raw:null, tgtKey:null},
-    {lbl:'SHARE SESS',   val:shareSess!=null?fPct(shareSess,3):'—', sub:'vs total site', raw:null, tgtKey:null},
-    {lbl:'SHARE NMV',    val:shareNMV!=null?fPct(shareNMV,3):'—',  sub:'vs total site', raw:null, tgtKey:null}
+    {lbl:'SHARE SESS',   val:shareSess!=null?fPct(shareSess,2):'—', sub:'vs total site', raw:null, tgtKey:null},
+    {lbl:'SHARE NMV',    val:shareNMV!=null?fPct(shareNMV,2):'—',  sub:'vs total site', raw:null, tgtKey:null}
   ];
   document.getElementById('ldg-kpis').innerHTML=kpiCfg.map(function(k){
     var tgtStr='',cls='';
@@ -553,7 +567,7 @@ function renderLanding(){
       cls=pct>=0?'vs-target-ok':pct>=-10?'vs-target-warn':'vs-target-bad';
       var tc=pct>=0?'ok':pct>=-10?'warn':'bad';
       var isR=k.tgtKey==='cvr'||k.tgtKey==='ctr';
-      tgtStr='<div class="kpi-target '+tc+'">'+(pct>=0?'▲ ':'▼ ')+Math.abs(pct).toFixed(1)+'% vs target '+(isR?fPct(tgtVal[k.tgtKey],3):fNum(tgtVal[k.tgtKey]))+'</div>';
+      tgtStr='<div class="kpi-target '+tc+'">'+(pct>=0?'▲ ':'▼ ')+Math.abs(pct).toFixed(1)+'% vs target '+(isR?fPct(tgtVal[k.tgtKey],2):fNum(tgtVal[k.tgtKey]))+'</div>';
     }
     return '<div class="kpi-card '+cls+'"><div class="kpi-label">'+k.lbl+'</div><div class="kpi-val">'+k.val+'</div><div class="kpi-sub">'+k.sub+'</div>'+tgtStr+'</div>';
   }).join('');
@@ -603,7 +617,7 @@ function renderLanding(){
   tblRows.forEach(function(row){
     h+='<tr>'+cols2.map(function(c){
       var v=row[c.k];
-      if(c.rate) return '<td>'+fPct(v,3)+'</td>';
+      if(c.rate) return '<td>'+fPct(v,2)+'</td>';
       if(c.nmv)  return '<td>'+fNMV(v)+'</td>';
       if(!c.r)   return '<td>'+v+'</td>';
       return '<td>'+fNum(v)+'</td>';
@@ -676,15 +690,15 @@ function renderContainer(){
   var kpiCfg=[
     {lbl:'SESIONES',           val:fNum(tot.sessions),       sub:'Total containers campaña', raw:tot.sessions, tgtKey:'sessions'},
     {lbl:'NMV (USD)',          val:fNMV(tot.nmv),            sub:'168hs atrib.', raw:tot.nmv, tgtKey:'nmv'},
-    {lbl:'CVR',                val:fPct(tot.cvr,3),          sub:'Orders / Sessions', raw:tot.cvr, tgtKey:'cvr'},
+    {lbl:'CVR',                val:fPct(tot.cvr,2),          sub:'Orders / Sessions', raw:tot.cvr, tgtKey:'cvr'},
     {lbl:'NASP',               val:fNMV(tot.nasp),           sub:'NMV / Orders'},
     {lbl:'NSI/T',              val:tot.nsit?tot.nsit.toFixed(2):'—', sub:'NSI / Transactions'},
     {lbl:'ORDERS',             val:fNum(tot.orders),         sub:'Acumuladas'},
     {lbl:'BUYERS',             val:fNum(tot.buyers),         sub:'Únicos'},
-    {lbl:'SHARE SESS vs SITE', val:shareSessSite!=null?fPct(shareSessSite,3):'—', sub:'Containers / Total site'},
-    {lbl:'SHARE NMV vs SITE',  val:shareNMVSite!=null?fPct(shareNMVSite,3):'—',  sub:'Containers / Total site'},
-    {lbl:'SHARE SESS vs CNTS', val:shareSessCnt!=null?fPct(shareSessCnt,3):'—',  sub:'Campaña / Total containers'},
-    {lbl:'SHARE NMV vs CNTS',  val:shareNMVCnt!=null?fPct(shareNMVCnt,3):'—',   sub:'Campaña / Total containers'}
+    {lbl:'SHARE SESS vs SITE', val:shareSessSite!=null?fPct(shareSessSite,2):'—', sub:'Containers / Total site'},
+    {lbl:'SHARE NMV vs SITE',  val:shareNMVSite!=null?fPct(shareNMVSite,2):'—',  sub:'Containers / Total site'},
+    {lbl:'SHARE SESS vs CNTS', val:shareSessCnt!=null?fPct(shareSessCnt,2):'—',  sub:'Campaña / Total containers'},
+    {lbl:'SHARE NMV vs CNTS',  val:shareNMVCnt!=null?fPct(shareNMVCnt,2):'—',   sub:'Campaña / Total containers'}
   ];
   document.getElementById('cnt-kpis').innerHTML=kpiCfg.map(function(k){
     var tgtStr='',cls='';
@@ -693,7 +707,7 @@ function renderContainer(){
       cls=pct>=0?'vs-target-ok':pct>=-10?'vs-target-warn':'vs-target-bad';
       var tc=pct>=0?'ok':pct>=-10?'warn':'bad';
       var isR=k.tgtKey==='cvr';
-      tgtStr='<div class="kpi-target '+tc+'">'+(pct>=0?'▲ ':'▼ ')+Math.abs(pct).toFixed(1)+'% vs target '+(isR?fPct(tgtVal[k.tgtKey],3):fNum(tgtVal[k.tgtKey]))+'</div>';
+      tgtStr='<div class="kpi-target '+tc+'">'+(pct>=0?'▲ ':'▼ ')+Math.abs(pct).toFixed(1)+'% vs target '+(isR?fPct(tgtVal[k.tgtKey],2):fNum(tgtVal[k.tgtKey]))+'</div>';
     }
     return '<div class="kpi-card '+cls+'"><div class="kpi-label">'+k.lbl+'</div><div class="kpi-val">'+k.val+'</div><div class="kpi-sub">'+k.sub+'</div>'+(tgtStr||'')+'</div>';
   }).join('');
@@ -750,7 +764,7 @@ function renderContainer(){
   tblData.forEach(function(row){
     h+='<tr>'+colsCnt.map(function(c){
       var v=row[c.k];
-      if(c.rate) return '<td>'+fPct(v,3)+'</td>';
+      if(c.rate) return '<td>'+fPct(v,2)+'</td>';
       if(c.nmv)  return '<td>'+fNMV(v)+'</td>';
       if(!c.r)   return '<td style="max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+v+'</td>';
       return '<td>'+fNum(v)+'</td>';
@@ -834,12 +848,12 @@ function renderInlineComparison(placement, containerId){
   var colDefs = isMS
     ? [{l:'Clicks', kc:'clicks', fmt:fNum,                           rate:false, tgtKey:null},
        {l:'Prints', kc:'prints', fmt:fNum,                           rate:false, tgtKey:null},
-       {l:'CTR',    kc:'ctr',    fmt:function(v){return fPct(v,3);}, rate:true,  tgtKey:'ctr'}]
+       {l:'CTR',    kc:'ctr',    fmt:function(v){return fPct(v,2);}, rate:true,  tgtKey:'ctr'}]
     : [{l:'Sessions',kc:'sessions',fmt:fNum,                          rate:false, tgtKey:'sessions'},
        {l:'NMV',    kc:'nmv',    fmt:fNMV,                           rate:false, tgtKey:placement==='container'?'nmv':null},
        {l:'Orders', kc:'orders', fmt:fNum,                           rate:false, tgtKey:null},
        {l:'Buyers', kc:'buyers', fmt:fNum,                           rate:false, tgtKey:null},
-       {l:'CVR',    kc:'cvr',    fmt:function(v){return fPct(v,3);}, rate:true,  tgtKey:placement==='container'?'cvr':null},
+       {l:'CVR',    kc:'cvr',    fmt:function(v){return fPct(v,2);}, rate:true,  tgtKey:placement==='container'?'cvr':null},
        {l:'NASP',   kc:'nasp',   fmt:fNMV,                           rate:false, tgtKey:null},
        {l:'NSI/T',  kc:'nsit',   fmt:function(v){return v?v.toFixed(2):'—';},rate:false,tgtKey:null}];
 
