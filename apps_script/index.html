@@ -559,22 +559,22 @@ function renderLanding(){
   var tgt = (D.targets&&D.targets.landing)||{};
   var tgtDates = (D.targets&&D.targets.dates)||[];
   var tgtVal = {
-    sessions: tgtAccum(tgt.sessions, tgtDates, dates),
-    nmv:      tgtAccum(tgt.nmv,      tgtDates, dates),
-    cvr:      tgtAvg(tgt.cvr,        tgtDates, dates)
+    sessions:       tgtAccum(tgt.sessions,       tgtDates, dates),
+    ctr:            tgtAvg(tgt.ctr,              tgtDates, dates),
+    share_sessions: tgtAvg(tgt.share_sessions,   tgtDates, dates)
   };
 
   // KPIs
   var kpiCfg = [
     {lbl:'SESIONES',     val:fNum(tot.sessions),    sub:'Acumuladas', raw:tot.sessions, tgtKey:'sessions'},
     {lbl:'NMV (USD)',    val:fNMV(tot.nmv),          sub:'168hs atrib.', raw:tot.nmv, tgtKey:'nmv'},
-    {lbl:'CTR',          val:fPct(tot.ctr,2),        sub:'Users container / Users landing', raw:tot.ctr, tgtKey:null},
+    {lbl:'CTR',          val:fPct(tot.ctr,2),        sub:'Users container / Users landing', raw:tot.ctr, tgtKey:'ctr'},
     {lbl:'CVR',          val:fPct(tot.cvr,2),        sub:'Orders / Sessions', raw:tot.cvr, tgtKey:'cvr'},
     {lbl:'NASP',         val:fNMV(tot.nasp),         sub:'NMV / Orders', raw:null, tgtKey:null},
     {lbl:'NSI/T',        val:tot.nsit?tot.nsit.toFixed(2):'—', sub:'NSI / Transactions', raw:null, tgtKey:null},
     {lbl:'ORDERS',       val:fNum(tot.orders),       sub:'Acumuladas', raw:null, tgtKey:null},
     {lbl:'BUYERS',       val:fNum(tot.buyers),       sub:'Únicos', raw:null, tgtKey:null},
-    {lbl:'SHARE SESS',   val:shareSess!=null?fPct(shareSess,2):'—', sub:'vs total site', raw:null, tgtKey:null},
+    {lbl:'SHARE SESS',   val:shareSess!=null?fPct(shareSess,2):'—', sub:'vs total site', raw:shareSess, tgtKey:'share_sessions'},
     {lbl:'SHARE NMV',    val:shareNMV!=null?fPct(shareNMV,2):'—',  sub:'vs total site', raw:null, tgtKey:null}
   ];
   document.getElementById('ldg-kpis').innerHTML=kpiCfg.map(function(k){
@@ -583,7 +583,7 @@ function renderLanding(){
       var pct=(k.raw-tgtVal[k.tgtKey])/tgtVal[k.tgtKey]*100;
       cls=pct>=0?'vs-target-ok':pct>=-10?'vs-target-warn':'vs-target-bad';
       var tc=pct>=0?'ok':pct>=-10?'warn':'bad';
-      var isR=k.tgtKey==='cvr'||k.tgtKey==='ctr';
+      var isR=k.tgtKey==='ctr'||k.tgtKey==='share_sessions';
       tgtStr='<div class="kpi-target '+tc+'">'+(pct>=0?'▲ ':'▼ ')+Math.abs(pct).toFixed(1)+'% vs target '+(isR?fPct(tgtVal[k.tgtKey],2):fNum(tgtVal[k.tgtKey]))+'</div>';
     }
     return '<div class="kpi-card '+cls+'"><div class="kpi-label">'+k.lbl+'</div><div class="kpi-val">'+k.val+'</div><div class="kpi-sub">'+k.sub+'</div>'+tgtStr+'</div>';
