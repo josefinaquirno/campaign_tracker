@@ -1414,11 +1414,13 @@ function renderCalidadContainers(){
     drillMap[r.deal_container_id].push(r);
   });
 
-  function getDx(cvr,tasaVis){
+  function getDx(cvr,aspRango,tasaVis){
+    var b=bench[aspRango]||null;
+    var hiCVR=b!=null?cvr>=b:(cvr>0);
     var hiVis=campTasa>0?tasaVis>=campTasa:true;
-    if(cvr>0&&hiVis) return {label:'OK',color:'#00A650',bg:'#E8F5E9',icon:'🟢'};
-    if(cvr>0&&!hiVis) return {label:'Revisar Exhibidos',color:'#3483FA',bg:'#E3F2FD',icon:'🔵'};
-    if(cvr===0&&hiVis) return {label:'Revisar Oferta',color:'#F5A623',bg:'#FFF8E1',icon:'🟡'};
+    if(hiCVR&&hiVis)  return {label:'OK',color:'#00A650',bg:'#E8F5E9',icon:'🟢'};
+    if(hiCVR&&!hiVis) return {label:'Revisar Exhibidos',color:'#3483FA',bg:'#E3F2FD',icon:'🔵'};
+    if(!hiCVR&&hiVis) return {label:'Revisar Oferta',color:'#F5A623',bg:'#FFF8E1',icon:'🟡'};
     return {label:'Sin actividad',color:'#aaa',bg:'#f5f5f5',icon:'⚪'};
   }
 
@@ -1445,7 +1447,7 @@ function renderCalidadContainers(){
     rows.forEach(function(c){
       var tasaVis=+(c.TASA_VISITA||0);
       var cvr=+(c.CVR||0);
-      var dx=getDx(cvr,tasaVis);
+      var dx=getDx(cvr,c.ASP_RANGO||'Sin Rango',tasaVis);
       var nmvShare=totalNMV>0?(+(c.NMV||0))/totalNMV*100:0;
       var cvrCol=bench[c.ASP_RANGO]!=null?(cvr>=(bench[c.ASP_RANGO]||0)?'#00A650':'#D32F2F'):'#666';
       var shortN=(c.CONTAINER_NAME||'').replace(/MKP DEMAND 5 5 ABRIL 2026\s*/i,'').trim();
