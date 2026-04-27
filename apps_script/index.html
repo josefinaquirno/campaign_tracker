@@ -249,28 +249,25 @@
     <div class="tab-panel" id="panel-container">
       <div class="section-label">CONTAINERS <span class="badge" id="cnt-badge-period">—</span></div>
 
-      <!-- SECCIÓN 1: KPIs agregados -->
-      <div class="section-label" style="margin-top:4px">KPIs agregados del placement</div>
-      <div class="kpi-grid" id="cnt-kpis"></div>
+      <div class="kpi-grid" id="cnt-kpis-main"></div>
 
-      <div class="charts-2">
-        <div class="chart-card">
-          <div class="chart-title">Sesiones diarias</div>
-          <div class="chart-sub">Total containers de campaña</div>
-          <div class="chart-wrap"><canvas id="cCNT_SESS"></canvas></div>
-        </div>
-        <div class="chart-card">
-          <div class="chart-title">NMV diario (USD)</div>
-          <div class="chart-sub">Revenue atribuido a containers</div>
-          <div class="chart-wrap"><canvas id="cCNT_NMV"></canvas></div>
-        </div>
+      <div class="chart-card" style="margin-bottom:16px">
+        <div class="chart-title">NMV diario (USD)</div>
+        <div class="chart-sub">Barras = NMV actual (amarillo) y Target (gris) · Línea = CVR % (eje derecho)</div>
+        <div class="chart-wrap"><canvas id="cCNT_NMV"></canvas></div>
       </div>
+
+      <div class="kpi-grid" id="cnt-kpis-extra" style="margin-bottom:16px"></div>
 
       <!-- SECCIÓN 2: Tabla por container -->
       <div class="table-card">
         <div class="table-head">
           <div class="table-head-title">Performance por container activo</div>
-          <div style="display:flex;gap:8px;align-items:center;">
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+            <select id="cnt-date-select" onchange="setCntDateFilter(this.value)"
+              style="border:1px solid #ddd;border-radius:6px;padding:4px 10px;font-size:11px;font-family:inherit;color:#333;cursor:pointer;">
+              <option value="ALL">Todos los días</option>
+            </select>
             <div class="toggle-row" style="margin:0" id="cnt-view-toggle">
               <button class="pill active" onclick="setCntView('container',this)">Por container</button>
               <button class="pill" onclick="setCntView('vertical',this)">Por vertical</button>
@@ -348,9 +345,10 @@ var CAL_OPEN_DRILL = null;
 var CH = {};
 var ACTIVE_TAB = 'summary';
 var LDG_FILTER = 'ALL';
-var CNT_VIEW   = 'container';
+var CNT_VIEW        = 'container';
+var CNT_DATE_FILTER = 'ALL';
 var CMP_IDX    = '';
-var SORT_COL   = { ms:'clicks', ldg:'sessions', cnt:'sessions' };
+var SORT_COL   = { ms:'clicks', ldg:'sessions', cnt:'cvr' };
 var SORT_ASC   = { ms:false, ldg:false, cnt:false };
 var MS_BUCKET     = 'ALL';
 var MS_SEG_FILTER = 'ALL';
@@ -780,7 +778,8 @@ function renderMS(){
     {lbl:'CTR',             val:fPct(tot.ctr,2),     sub:'Clicks / Prints', tgtKey:'ctr', raw:tot.ctr, hCur:tot.ctr, hRef:histTot.ctr},
     {lbl:'CTR SEGMENTADO',  val:ctrSeg!=null?fPct(ctrSeg,2):'—',             sub:'Clicks / Prints (seg.)', tgtKey:null},
     {lbl:'% PRINTS SEG.',   val:pctPrintsSeg!=null?fPct(pctPrintsSeg,2):'—', sub:'Prints segmentados / total', tgtKey:null},
-    {lbl:'% MS SEGMENTADOS',val:pctLISeg!=null?fPct(pctLISeg,2):'—',         sub:segLIs+' de '+totalLIs+' line items', tgtKey:null}
+    {lbl:'% MS SEGMENTADOS',val:pctLISeg!=null?fPct(pctLISeg,2):'—',         sub:segLIs+' de '+totalLIs+' line items', tgtKey:null},
+    {lbl:'CREATIVOS',       val:fNum(totalLIs),                               sub:'Line items en campaña', tgtKey:null}
   ];
   document.getElementById('ms-kpis').innerHTML = kpiCfg.map(function(k){
     var tgtStr='', cls='';
@@ -1121,6 +1120,7 @@ function renderLanding(){
 // ──────────────────────────────────────────────
 // CONTAINER
 // ──────────────────────────────────────────────
+function setCntDateFilter(v){ CNT_DATE_FILTER=v; renderContainer(); }
 function setCntView(v,btn){
   CNT_VIEW=v;
   btn.parentNode.querySelectorAll('.pill').forEach(function(b){b.classList.remove('active');});
@@ -1130,7 +1130,7 @@ function setCntView(v,btn){
 
 function renderContainer(){
   var rows=D.container||[];
-  if(!rows.length){document.getElementById('cnt-kpis').innerHTML='<p style="color:#aaa;font-size:13px">Sin datos Container</p>';return;}
+  if(!rows.length){document.getElementById('cnt-kpis-main').innerHTML='<p style="color:#aaa;font-size:13px">Sin datos Container</p>';return;}
 
   // Aggregate by date for KPIs & charts
   var byDate={};
@@ -1182,41 +1182,99 @@ function renderContainer(){
     share_nmv:      tgtAvg(tgt.share_nmv,        tgtDates, dates)
   };
 
-  // KPIs
-  var kpiCfg=[
-    {lbl:'SESIONES',           val:fNum(tot.sessions),       sub:'Total containers campaña', raw:tot.sessions, tgtKey:'sessions'},
-    {lbl:'NMV (USD)',          val:fNMV(tot.nmv),            sub:'168hs atrib.', raw:tot.nmv, tgtKey:'nmv'},
-    {lbl:'CVR',                val:fPct(tot.cvr,2),          sub:'Orders / Sessions', raw:tot.cvr, tgtKey:'cvr'},
-    {lbl:'NASP',               val:fNMV(tot.nasp),           sub:'NMV / Orders', raw:tot.nasp, tgtKey:'nasp'},
-    {lbl:'NSI/T',              val:tot.nsit?tot.nsit.toFixed(2):'—', sub:'NSI / Transactions', raw:tot.nsi, tgtKey:'nsi'},
-    {lbl:'TRANSACCIONES',      val:fNum(tot.transactions),   sub:'Acumuladas', raw:tot.transactions, tgtKey:'transactions'},
-    {lbl:'SESIONES VIP',       val:fNum(tot.users_vip),      sub:'Usuarios únicos VIP', raw:tot.users_vip, tgtKey:'users_vip'},
-    {lbl:'ORDERS',             val:fNum(tot.orders),         sub:'Acumuladas'},
-    {lbl:'BUYERS',             val:fNum(tot.buyers),         sub:'Únicos'},
-    {lbl:'SHARE SESS vs SITE', val:shareSessSite!=null?fPct(shareSessSite,2):'—', sub:'Containers / Total site', raw:shareSessSite, tgtKey:'share_sessions'},
-    {lbl:'SHARE NMV vs SITE',  val:shareNMVSite!=null?fPct(shareNMVSite,2):'—',  sub:'Containers / Total site', raw:shareNMVSite, tgtKey:'share_nmv'},
-    {lbl:'SHARE SESS vs CNTS', val:shareSessCnt!=null?fPct(shareSessCnt,2):'—',  sub:'Campaña / Total containers'},
-    {lbl:'SHARE NMV vs CNTS',  val:shareNMVCnt!=null?fPct(shareNMVCnt,2):'—',   sub:'Campaña / Total containers'}
+  // Función render KPI cards containers
+  function renderCntKpis(cfgArr, elId){
+    document.getElementById(elId).innerHTML=cfgArr.map(function(k){
+      var tgtStr='',cls='';
+      if(k.tgtKey&&tgtVal[k.tgtKey]!=null&&k.raw!=null){
+        var pct=(k.raw-tgtVal[k.tgtKey])/tgtVal[k.tgtKey]*100;
+        cls=pct>=0?'vs-target-ok':pct>=-10?'vs-target-warn':'vs-target-bad';
+        var tc=pct>=0?'ok':pct>=-10?'warn':'bad';
+        var isR=k.tgtKey==='cvr'||k.tgtKey==='share_sessions'||k.tgtKey==='share_nmv';
+        var isCur=k.tgtKey==='nasp';
+        var tgtDisplay=isR?fPct(tgtVal[k.tgtKey],2):isCur?fNMV(tgtVal[k.tgtKey]):fNum(tgtVal[k.tgtKey]);
+        tgtStr='<div class="kpi-target '+tc+'">'+(pct>=0?'▲ ':'▼ ')+Math.abs(pct).toFixed(1)+'% vs target '+tgtDisplay+'</div>';
+      }
+      return '<div class="kpi-card '+cls+'"><div class="kpi-label">'+k.lbl+'</div><div class="kpi-val">'+k.val+'</div><div class="kpi-sub">'+k.sub+'</div>'+(tgtStr||'')+'</div>';
+    }).join('');
+  }
+
+  // KPIs principales (encima del gráfico)
+  var kpiMain=[
+    {lbl:'SESIONES',          val:fNum(tot.sessions),                               sub:'Total containers campaña',   raw:tot.sessions,  tgtKey:'sessions'},
+    {lbl:'NMV (USD)',         val:fNMV(tot.nmv),                                    sub:'168hs atrib.',               raw:tot.nmv,       tgtKey:'nmv'},
+    {lbl:'SHARE NMV vs SITE', val:shareNMVSite!=null?fPct(shareNMVSite,2):'—',      sub:'Campaña / Total site',       raw:shareNMVSite,  tgtKey:'share_nmv'},
+    {lbl:'NASP',              val:fNMV(tot.nasp),                                   sub:'NMV / Orders',               raw:tot.nasp,      tgtKey:'nasp'},
+    {lbl:'NSI/T',             val:tot.nsit?tot.nsit.toFixed(2):'—',                 sub:'NSI / Transactions',         raw:tot.nsi,       tgtKey:'nsi'},
+    {lbl:'CVR',               val:fPct(tot.cvr,2),                                  sub:'Orders / Sessions',          raw:tot.cvr,       tgtKey:'cvr'}
   ];
-  document.getElementById('cnt-kpis').innerHTML=kpiCfg.map(function(k){
-    var tgtStr='',cls='';
-    if(k.tgtKey&&tgtVal[k.tgtKey]!=null&&k.raw!=null){
-      var pct=(k.raw-tgtVal[k.tgtKey])/tgtVal[k.tgtKey]*100;
-      cls=pct>=0?'vs-target-ok':pct>=-10?'vs-target-warn':'vs-target-bad';
-      var tc=pct>=0?'ok':pct>=-10?'warn':'bad';
-      var isR=k.tgtKey==='cvr'||k.tgtKey==='share_sessions'||k.tgtKey==='share_nmv';
-      var isCur=k.tgtKey==='nasp';
-      var tgtDisplay=isR?fPct(tgtVal[k.tgtKey],2):isCur?fNMV(tgtVal[k.tgtKey]):fNum(tgtVal[k.tgtKey]);
-      tgtStr='<div class="kpi-target '+tc+'">'+(pct>=0?'▲ ':'▼ ')+Math.abs(pct).toFixed(1)+'% vs target '+tgtDisplay+'</div>';
-    }
-    return '<div class="kpi-card '+cls+'"><div class="kpi-label">'+k.lbl+'</div><div class="kpi-val">'+k.val+'</div><div class="kpi-sub">'+k.sub+'</div>'+(tgtStr||'')+'</div>';
-  }).join('');
+
+  // KPIs secundarios (debajo del gráfico)
+  var kpiExtra=[
+    {lbl:'ORDERS',             val:fNum(tot.orders),                                sub:'Acumuladas'},
+    {lbl:'BUYERS',             val:fNum(tot.buyers),                                sub:'Únicos'},
+    {lbl:'TRANSACCIONES',      val:fNum(tot.transactions),                          sub:'Acumuladas',                 raw:tot.transactions, tgtKey:'transactions'},
+    {lbl:'SESIONES VIP',       val:fNum(tot.users_vip),                             sub:'Usuarios únicos VIP',        raw:tot.users_vip,    tgtKey:'users_vip'},
+    {lbl:'SHARE SESS vs SITE', val:shareSessSite!=null?fPct(shareSessSite,2):'—',   sub:'Containers / Total site',   raw:shareSessSite,    tgtKey:'share_sessions'},
+    {lbl:'SHARE SESS vs CNTS', val:shareSessCnt!=null?fPct(shareSessCnt,2):'—',     sub:'Campaña / Total containers'},
+    {lbl:'SHARE NMV vs CNTS',  val:shareNMVCnt!=null?fPct(shareNMVCnt,2):'—',      sub:'Campaña / Total containers'}
+  ];
+
+  renderCntKpis(kpiMain,  'cnt-kpis-main');
+  renderCntKpis(kpiExtra, 'cnt-kpis-extra');
 
   // Charts
   var lbls=dates.map(fDate);
-  var tSessLine=tgtLine(tgt.sessions,tgtDates,dates), tNMVLine=tgtLine(tgt.nmv,tgtDates,dates);
-  mkLine('cCNT_SESS',lbls,[{label:'Sessions',data:dates.map(function(d){return byDate[d].sessions;}),borderColor:C1,backgroundColor:'rgba(255,230,0,0.1)',fill:true,tension:.3,pointRadius:4}].concat(tSessLine?[tgtDS(tSessLine)]:[]),'');
-  mkLine('cCNT_NMV', lbls,[{label:'NMV',    data:dates.map(function(d){return byDate[d].nmv;}),    borderColor:C2,backgroundColor:'rgba(26,26,46,0.08)',fill:true,tension:.3,pointRadius:4}].concat(tNMVLine?[tgtDS(tNMVLine)]:[]),'');
+  var tNMVLine=tgtLine(tgt.nmv,tgtDates,dates);
+  // NMV chart: barras (actual + target) + línea CVR
+  var nmvCntActual = dates.map(function(d){ return byDate[d].nmv; });
+  var cvrCntLine   = dates.map(function(d){
+    var b=byDate[d];
+    return b.sessions>0 ? +(b.orders/b.sessions*100).toFixed(3) : null;
+  });
+  if(CH['cCNT_NMV']) CH['cCNT_NMV'].destroy();
+  var nmvCntDatasets=[
+    {type:'bar',  label:'NMV (USD)', data:nmvCntActual, yAxisID:'yNMV',
+     backgroundColor:'rgba(255,230,0,0.85)', borderRadius:3, order:2}
+  ];
+  if(tNMVLine) nmvCntDatasets.push(
+    {type:'bar',  label:'Target NMV', data:tNMVLine, yAxisID:'yNMV',
+     backgroundColor:'rgba(180,180,180,0.5)', borderRadius:3, order:2}
+  );
+  nmvCntDatasets.push(
+    {type:'line', label:'CVR %', data:cvrCntLine, yAxisID:'yCVR',
+     borderColor:'#2196F3', backgroundColor:'transparent',
+     tension:.3, pointRadius:3, borderWidth:2, order:1}
+  );
+  CH['cCNT_NMV']=new Chart(document.getElementById('cCNT_NMV').getContext('2d'),{
+    data:{labels:lbls, datasets:nmvCntDatasets},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom',labels:{font:{size:10},boxWidth:10,padding:8}}},
+      scales:{
+        x:    {grid:{display:false}, ticks:{font:{size:10},maxRotation:45}},
+        yNMV: {position:'left',  grid:{color:'#f0f0f0'}, ticks:{font:{size:10},callback:function(v){return fNMV(v);}}},
+        yCVR: {position:'right', grid:{drawOnChartArea:false},
+               ticks:{font:{size:10},callback:function(v){return v.toFixed(2)+'%';}}}
+      }
+    }
+  });
+
+  // Poblar dropdown de fechas
+  var sel=document.getElementById('cnt-date-select');
+  if(sel){
+    var prevVal=CNT_DATE_FILTER;
+    sel.innerHTML='<option value="ALL">Todos los días</option>';
+    dates.forEach(function(d){
+      var opt=document.createElement('option');
+      opt.value=d; opt.textContent=fDate(d);
+      if(d===prevVal) opt.selected=true;
+      sel.appendChild(opt);
+    });
+  }
+
+  // Filtrar rows de la tabla por fecha seleccionada
+  var tblRows = CNT_DATE_FILTER==='ALL' ? rows : rows.filter(function(r){ return (r.date||r.DATE)===CNT_DATE_FILTER; });
 
   // Table: by container or by vertical
   var colsCnt=[
@@ -1235,7 +1293,7 @@ function renderContainer(){
   var tblData=[];
   if(CNT_VIEW==='container'){
     var cntMap={};
-    rows.forEach(function(r){
+    tblRows.forEach(function(r){
       var k=r.container_name; if(!cntMap[k]) cntMap[k]={name:k,sessions:0,nmv:0,orders:0,transactions:0,nsi:0,users_container:0,users_vip:0,buyers:0,vertical:r.vertical};
       var b=cntMap[k];
       b.sessions+=+r.sessions||0;b.nmv+=+r.nmv||0;b.orders+=+r.orders||0;b.transactions+=+r.transactions||0;
@@ -1244,7 +1302,7 @@ function renderContainer(){
     tblData=Object.values(cntMap);
   } else {
     var vMap={};
-    rows.forEach(function(r){
+    tblRows.forEach(function(r){
       var k=r.vertical||'OTHER'; if(!vMap[k]) vMap[k]={name:k,sessions:0,nmv:0,orders:0,transactions:0,nsi:0,users_container:0,users_vip:0,buyers:0};
       var b=vMap[k];
       b.sessions+=+r.sessions||0;b.nmv+=+r.nmv||0;b.orders+=+r.orders||0;b.transactions+=+r.transactions||0;
@@ -1483,39 +1541,82 @@ function renderCalidadOferta(){
   var badge=document.getElementById('cal-badge-period');
   if(badge) badge.textContent='Act: '+(C.refreshed_at||'—').substring(0,10);
 
-  // Cards de etapa E/V/G
-  var stepMap={};
-  (C.steps||[]).forEach(function(s){stepMap[s.step]=s;});
-  var stepCfg=[
-    {id:'cal-step-e',lbl:'EXHIBIDOS',key:'E',color:'#3483FA'},
-    {id:'cal-step-v',lbl:'VISITADOS',key:'V',color:'#F5A623'},
-    {id:'cal-step-g',lbl:'ITEMS CON GMV',key:'G',color:'#00A650'}
+  // Agregar exhibidos_pattern y visitados_pattern (suma todos los PATTERN)
+  var EP={}, VP={};
+  (C.exhibidos_pattern||[]).forEach(function(r){
+    Object.keys(r).forEach(function(k){
+      if(k!=='PATTERN'&&k!=='PRICE_POND') EP[k]=(EP[k]||0)+(+r[k]||0);
+    });
+    EP.PRICE_POND=r.PRICE_POND; // último valor (o podría promediarse)
+  });
+  (C.visitados_pattern||[]).forEach(function(r){
+    Object.keys(r).forEach(function(k){
+      if(k!=='PATTERN'&&k!=='PRICE_POND'&&k!=='DISCOUNT_POND')
+        VP[k]=(VP[k]||0)+(+r[k]||0);
+    });
+    VP.PRICE_POND=r.PRICE_POND;
+    VP.DISCOUNT_POND=r.DISCOUNT_POND;
+  });
+
+  var totE=EP.ITEMS_EXHIBIDOS||0;
+  var totV=VP.VIEWED_ITEMS||0;
+  var totG=VP.GMV_ITEMS||0;
+
+  // Helper mini-card
+  function miniCard(color, val, lbl){ return '<div style="background:#f5f5f5;border-radius:6px;padding:6px;text-align:center"><div style="font-size:12px;font-weight:700;color:'+color+'">'+val+'</div><div style="font-size:9px;color:#aaa;margin-top:2px">'+lbl+'</div></div>'; }
+
+  // Cards E/V/G
+  var steps=[
+    {id:'cal-step-e',lbl:'EXHIBIDOS',color:'#3483FA',
+     total:totE,
+     pct:'100%',
+     riu:  totE>0?((EP.HIGH_ITEMS||0)/totE*100).toFixed(1)+'%':'—',
+     oferta:totE>0?((EP.REAL_OFFER||0)/totE*100).toFixed(1)+'%':'—',
+     dto:'—'},
+    {id:'cal-step-v',lbl:'VISITADOS',color:'#F5A623',
+     total:totV,
+     pct:totE>0?(totV/totE*100).toFixed(1)+'% de exhibidos':'—',
+     riu:  totV>0?((VP.HIGH_ITEMS||0)/totV*100).toFixed(1)+'%':'—',
+     oferta:totV>0?(((VP.VIEWED_ITEMS||0)-(VP.NO_OFFER_ITEMS||0))/totV*100).toFixed(1)+'%':'—',
+     dto: VP.DISCOUNT_POND!=null?(VP.DISCOUNT_POND*100).toFixed(1)+'%':'—'},
+    {id:'cal-step-g',lbl:'ITEMS CON GMV',color:'#00A650',
+     total:totG,
+     pct:totV>0?(totG/totV*100).toFixed(1)+'% de visitados':'—',
+     riu:  totG>0?((VP.HIGH_GMV_ITEMS||0)/totG*100).toFixed(1)+'%':'—',
+     oferta:totG>0?(((VP.GMV_ITEMS||0)-(VP.NO_OFFER_GMV_ITEMS||0))/totG*100).toFixed(1)+'%':'—',
+     dto: VP.DISCOUNT_POND!=null?(VP.DISCOUNT_POND*100).toFixed(1)+'%':'—'}
   ];
-  var totE=(C.tot_exhib||0), totV=(C.tot_visit||0), totG=(C.tot_gmv_i||0);
-  var totArr=[totE,totV,totG];
-  stepCfg.forEach(function(sc,i){
-    var el=document.getElementById(sc.id); if(!el) return;
-    var s=stepMap[sc.key]||{};
-    var pct=i===0?'100%':i===1?(totE>0?(totV/totE*100).toFixed(1)+'% de exhibidos':'—'):(totV>0?(totG/totV*100).toFixed(1)+'% de visitados':'—');
-    el.style.borderTopColor=sc.color;
-    el.innerHTML='<div class="kpi-label">'+sc.lbl+'</div>'
-      +'<div class="kpi-val" style="color:'+sc.color+';font-size:20px">'+fNum(totArr[i])+'</div>'
-      +'<div class="kpi-sub">'+pct+'</div>'
+  steps.forEach(function(s){
+    var el=document.getElementById(s.id); if(!el) return;
+    el.style.borderTopColor=s.color;
+    el.innerHTML='<div class="kpi-label">'+s.lbl+'</div>'
+      +'<div class="kpi-val" style="color:'+s.color+';font-size:20px">'+fNum(s.total)+'</div>'
+      +'<div class="kpi-sub">'+s.pct+'</div>'
       +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:10px">'
-      +'<div style="background:#f5f5f5;border-radius:6px;padding:6px;text-align:center"><div style="font-size:12px;font-weight:700;color:'+sc.color+'">'+(s.avg_disc!=null?s.avg_disc.toFixed(1)+'%':'—')+'</div><div style="font-size:9px;color:#aaa;margin-top:2px">Dto. Pond.</div></div>'
-      +'<div style="background:#f5f5f5;border-radius:6px;padding:6px;text-align:center"><div style="font-size:12px;font-weight:700;color:'+sc.color+'">'+(s.riu_high_pct!=null?s.riu_high_pct.toFixed(1)+'%':'—')+'</div><div style="font-size:9px;color:#aaa;margin-top:2px">RIU High</div></div>'
-      +'<div style="background:#f5f5f5;border-radius:6px;padding:6px;text-align:center"><div style="font-size:12px;font-weight:700;color:'+sc.color+'">'+(s.con_oferta_pct!=null?s.con_oferta_pct.toFixed(1)+'%':'—')+'</div><div style="font-size:9px;color:#aaa;margin-top:2px">Con Oferta</div></div>'
+      +miniCard(s.color,s.dto,'Dto. Pond.')
+      +miniCard(s.color,s.riu,'RIU High')
+      +miniCard(s.color,s.oferta,'Con Oferta')
       +'</div>';
   });
 
-  // Funnel tables
-  var avgV=C.camp_tasa_visita||0;
-  var avgC=totV>0?(totG/totV*100):0;
+  // Tablas de financiación y tipo de oferta
+  function makeRows(defs){
+    return defs.map(function(d){
+      var e=d.e||0, v=d.v||0, g=d.g||0;
+      return {categoria:d.lbl, exhibidos:e, visitados:v, gmv_items:g,
+              pct_visita:e>0?v/e*100:0, pct_conv:v>0?g/v*100:0};
+    });
+  }
+
+  var avgV=totE>0?totV/totE*100:0;
+  var avgC=totV>0?totG/totV*100:0;
+
   function buildFunnelTable(rows, containerId){
-    if(!rows||!rows.length){document.getElementById(containerId).innerHTML='<p style="color:#aaa;font-size:12px">Sin datos</p>';return;}
+    var el=document.getElementById(containerId); if(!el) return;
+    if(!rows||!rows.length){el.innerHTML='<p style="color:#aaa;font-size:12px">Sin datos</p>';return;}
     var h='<div class="table-card"><div class="table-wrap"><table><thead><tr>'
-      +'<th>Categoría</th><th style="text-align:right">Exhibidos</th><th style="text-align:center;width:60px"></th>'
-      +'<th style="text-align:right">Visitados</th><th style="text-align:center;width:60px"></th>'
+      +'<th>Categoría</th><th style="text-align:right">Exhibidos</th><th style="text-align:center;width:55px"></th>'
+      +'<th style="text-align:right">Visitados</th><th style="text-align:center;width:55px"></th>'
       +'<th style="text-align:right">Items GMV</th></tr></thead><tbody>';
     rows.forEach(function(r){
       var hiV=(r.pct_visita||0)>=avgV, hiC=(r.pct_conv||0)>=avgC;
@@ -1531,10 +1632,25 @@ function renderCalidadOferta(){
         +'</tr>';
     });
     h+='</tbody></table></div></div>';
-    document.getElementById(containerId).innerHTML=h;
+    el.innerHTML=h;
   }
-  buildFunnelTable(C.financiacion||[],'cal-tabla-fin');
-  buildFunnelTable(C.tipo_oferta||[],'cal-tabla-tipo');
+
+  buildFunnelTable(makeRows([
+    {lbl:'Cofinanciado ML', e:EP.OFFER_COFINANCED, v:VP.OFFER_COFINANCED, g:VP.OFFER_COFINANCED_GMV},
+    {lbl:'100% Seller',     e:EP.OFFER_SELLER,     v:VP.OFFER_SELLER,     g:VP.OFFER_SELLER_GMV},
+    {lbl:'Sin Oferta',      e:(EP.ITEMS_EXHIBIDOS||0)-(EP.REAL_OFFER||0), v:VP.NO_OFFER_ITEMS, g:VP.NO_OFFER_GMV_ITEMS}
+  ]), 'cal-tabla-fin');
+
+  buildFunnelTable(makeRows([
+    {lbl:'Pre-negociada', e:EP.OFFER_PRENEGOTIATED, v:VP.OFFER_PRENEGOTIATED, g:VP.OFFER_PRENEGOTIATED_GMV},
+    {lbl:'Tiers',         e:EP.OFFER_TIERS,         v:VP.OFFER_TIERS,         g:VP.OFFER_TIERS_GMV},
+    {lbl:'Smart',         e:EP.OFFER_SMART,         v:VP.OFFER_SMART,         g:VP.OFFER_SMART_GMV},
+    {lbl:'Custom',        e:EP.OFFER_CUSTOM,        v:VP.OFFER_CUSTOM,        g:VP.OFFER_CUSTOM_GMV},
+    {lbl:'DOD',           e:EP.OFFER_DOD,           v:VP.OFFER_DOD,           g:VP.OFFER_DOD_GMV},
+    {lbl:'Lightning',     e:EP.OFFER_LIGHTNING,     v:VP.OFFER_LIGHTNING,     g:VP.OFFER_LIGHTNING_GMV},
+    {lbl:'Otros',         e:EP.OFFER_OTHERS,        v:VP.OFFER_OTHERS,        g:VP.OFFER_OTHERS_GMV},
+    {lbl:'Sin Oferta',    e:(EP.ITEMS_EXHIBIDOS||0)-(EP.REAL_OFFER||0), v:VP.NO_OFFER_ITEMS, g:VP.NO_OFFER_GMV_ITEMS}
+  ]), 'cal-tabla-tipo');
 }
 
 // ──────────────────────────────────────────────
@@ -1551,25 +1667,64 @@ function renderCalidadContainers(){
   if(loading) loading.style.display='none';
   if(body)    body.style.display='';
 
-  var badge=document.getElementById('cal-cnt-badge');
-  if(badge) badge.textContent=(C.containers||[]).length+' containers';
+  // Construir mapa de exhibidos por container
+  var exhibMap={};
+  (C.exhibidos_container||[]).forEach(function(r){ exhibMap[r.CONTAINER_DEAL_ID]=r; });
+
+  // Construir lista de containers desde visitados_container
+  var containersList=(C.visitados_container||[]).map(function(vc){
+    var ec=exhibMap[vc.CONTAINER_DEAL_ID]||{};
+    var sesiones=+(vc.UNIQUE_SESSION||0);
+    var trx=+(vc.TRANSACTIONS_24HS||0);
+    var nmv=+(vc.GMV_LC_168HS_TOTAL||0);
+    var exhibidos=+(ec.ITEMS_EXHIBIDOS||0);
+    var visitados=+(vc.VIEWED_ITEMS||0);
+    var gmvItems=+(vc.GMV_ITEMS||0);
+    return {
+      DEAL_CONTAINER_ID: vc.CONTAINER_DEAL_ID,
+      CONTAINER_NAME:    vc.CONTAINER_NAME,
+      SESIONES:    sesiones,
+      NMV:         nmv,
+      CVR:         sesiones>0?trx/sesiones*100:0,
+      EXHIBIDOS_ITEMS: exhibidos,
+      VISITADOS_ITEMS: visitados,
+      GMV_ITEMS:   gmvItems,
+      TASA_VISITA: exhibidos>0?visitados/exhibidos*100:0,
+      DTO_POND:    +(vc.DISCOUNT_POND||0)*100,
+      RIU_PCT_V:   visitados>0?(+(vc.HIGH_ITEMS||0))/visitados*100:0,
+      RIU_PCT_E:   exhibidos>0?(+(ec.HIGH_ITEMS||0))/exhibidos*100:0,
+      REAL_OFFER_V:+(vc.REAL_OFFER||0),
+      REAL_OFFER_E:+(ec.REAL_OFFER||0),
+      // Para drill
+      NO_OFFER_ITEMS:     +(vc.NO_OFFER_ITEMS||0),
+      NO_OFFER_GMV_ITEMS: +(vc.NO_OFFER_GMV_ITEMS||0),
+      OFFER_COFINANCED:   +(vc.OFFER_COFINANCED||0),   OFFER_COFINANCED_GMV:+(vc.OFFER_COFINANCED_GMV||0),
+      OFFER_SELLER:       +(vc.OFFER_SELLER||0),       OFFER_SELLER_GMV:    +(vc.OFFER_SELLER_GMV||0),
+      OFFER_PRENEGOTIATED:+(vc.OFFER_PRENEGOTIATED||0),OFFER_PRENEGOTIATED_GMV:+(vc.OFFER_PRENEGOTIATED_GMV||0),
+      OFFER_TIERS:        +(vc.OFFER_TIERS||0),        OFFER_TIERS_GMV:     +(vc.OFFER_TIERS_GMV||0),
+      OFFER_CUSTOM:       +(vc.OFFER_CUSTOM||0),       OFFER_CUSTOM_GMV:    +(vc.OFFER_CUSTOM_GMV||0),
+      OFFER_DOD:          +(vc.OFFER_DOD||0),          OFFER_DOD_GMV:       +(vc.OFFER_DOD_GMV||0),
+      OFFER_SMART:        +(vc.OFFER_SMART||0),        OFFER_SMART_GMV:     +(vc.OFFER_SMART_GMV||0),
+      OFFER_LIGHTNING:    +(vc.OFFER_LIGHTNING||0),    OFFER_LIGHTNING_GMV: +(vc.OFFER_LIGHTNING_GMV||0),
+      OFFER_OTHERS:       +(vc.OFFER_OTHERS||0),       OFFER_OTHERS_GMV:    +(vc.OFFER_OTHERS_GMV||0),
+      HIGH_ITEMS_V:+(vc.HIGH_ITEMS||0), MID_ITEMS_V:+(vc.MID_ITEMS||0), LOW_ITEMS_V:+(vc.LOW_ITEMS||0),
+      HIGH_GMV:   +(vc.HIGH_GMV_ITEMS||0),MID_GMV:  +(vc.MID_GMV_ITEMS||0),LOW_GMV:  +(vc.LOW_GMV_ITEMS||0)
+    };
+  });
+  containersList.sort(function(a,b){ return b.NMV-a.NMV; });
 
   var cg=C.container_groups||{};
-  var bench=C.bench||{};
-  var totalNMV=(C.containers||[]).reduce(function(s,c){return s+(+c.NMV||0);},0);
-  var campTasa=C.camp_tasa_visita||0;
+  var totalNMV=containersList.reduce(function(s,c){return s+c.NMV;},0);
+  // camp_tasa_visita = visitados/exhibidos total
+  var totE=(C.exhibidos_pattern||[]).reduce(function(s,r){return s+(+r.ITEMS_EXHIBIDOS||0);},0);
+  var totV=(C.visitados_pattern||[]).reduce(function(s,r){return s+(+r.VIEWED_ITEMS||0);},0);
+  var campTasa=totE>0?totV/totE*100:0;
 
-  // Drill map
-  var drillMap={};
-  (C.drill||[]).forEach(function(r){
-    if(!drillMap[r.deal_container_id]) drillMap[r.deal_container_id]=[];
-    drillMap[r.deal_container_id].push(r);
-  });
+  var badge=document.getElementById('cal-cnt-badge');
+  if(badge) badge.textContent=containersList.length+' containers';
 
-  function getDx(cvr,aspRango,tasaVis){
-    var b=bench[aspRango]||null;
-    var hiCVR=b!=null?cvr>=b:(cvr>0);
-    var hiVis=campTasa>0?tasaVis>=campTasa:true;
+  function getDx(cvr,tasaVis){
+    var hiCVR=cvr>0, hiVis=campTasa>0?tasaVis>=campTasa:true;
     if(hiCVR&&hiVis)  return {label:'OK',color:'#00A650',bg:'#E8F5E9',icon:'🟢'};
     if(hiCVR&&!hiVis) return {label:'Revisar Exhibidos',color:'#3483FA',bg:'#E3F2FD',icon:'🔵'};
     if(!hiCVR&&hiVis) return {label:'Revisar Oferta',color:'#F5A623',bg:'#FFF8E1',icon:'🟡'};
@@ -1579,47 +1734,42 @@ function renderCalidadContainers(){
   var GROUP_ORDER=['FOCO','NO FOCO','TACTICO'];
   var GROUP_COLOR={'FOCO':'#3483FA','NO FOCO':'#999','TACTICO':'#F5A623'};
   var groups={'FOCO':[],'NO FOCO':[],'TACTICO':[],'SIN GRUPO':[]};
-  (C.containers||[]).forEach(function(c){
+  containersList.forEach(function(c){
     var g=cg[c.DEAL_CONTAINER_ID]||'SIN GRUPO';
     if(!groups[g]) groups[g]=[];
     groups[g].push(c);
   });
 
   var h='';
-  var allGroups=GROUP_ORDER.concat(['SIN GRUPO']);
-  allGroups.forEach(function(grp){
-    var rows=groups[grp];
-    if(!rows||!rows.length) return;
+  GROUP_ORDER.concat(['SIN GRUPO']).forEach(function(grp){
+    var rows=groups[grp]; if(!rows||!rows.length) return;
     var color=GROUP_COLOR[grp]||'#aaa';
     h+='<tr style="background:#f0f0f0;border-top:3px solid '+color+'">'
-      +'<td colspan="8" style="padding:9px 16px;font-size:11px;font-weight:800;color:#333;text-transform:uppercase;letter-spacing:.06em">'
+      +'<td colspan="8" style="padding:9px 16px;font-size:11px;font-weight:800;color:#333;text-transform:uppercase">'
       +'<span style="color:'+color+'">▶</span> '+grp
       +' <span style="font-weight:400;color:#999;margin-left:8px">'+rows.length+' containers</span>'
       +'</td></tr>';
     rows.forEach(function(c){
-      var tasaVis=+(c.TASA_VISITA||0);
-      var cvr=+(c.CVR||0);
-      var dx=getDx(cvr,c.ASP_RANGO||'Sin Rango',tasaVis);
-      var nmvShare=totalNMV>0?(+(c.NMV||0))/totalNMV*100:0;
-      var cvrCol=bench[c.ASP_RANGO]!=null?(cvr>=(bench[c.ASP_RANGO]||0)?'#00A650':'#D32F2F'):'#666';
-      var shortN=(c.CONTAINER_NAME||'').replace(/MKP DEMAND 5 5 ABRIL 2026\s*/i,'').trim();
+      var dx=getDx(c.CVR, c.TASA_VISITA);
+      var nmvShare=totalNMV>0?c.NMV/totalNMV*100:0;
+      var shortN=(c.CONTAINER_NAME||'').replace(/MKP\s+DEMAND\s+/i,'').trim();
       h+='<tr style="background:'+dx.bg+';cursor:pointer" onclick="calToggleDrill(\''+c.DEAL_CONTAINER_ID+'\')">'
         +'<td style="padding:9px 11px 9px 20px;font-weight:600">'+dx.icon+' <span title="'+c.CONTAINER_NAME+'">'+shortN.slice(0,44)+'</span></td>'
-        +'<td style="text-align:right;padding:9px 11px;font-weight:700;color:'+cvrCol+'">'+cvr.toFixed(2)+'%</td>'
-        +'<td style="text-align:right;padding:9px 11px">'+fNMV(+(c.NMV||0))+'</td>'
+        +'<td style="text-align:right;padding:9px 11px;font-weight:700">'+c.CVR.toFixed(2)+'%</td>'
+        +'<td style="text-align:right;padding:9px 11px">'+fNMV(c.NMV)+'</td>'
         +'<td style="text-align:right;padding:9px 11px">'+nmvShare.toFixed(1)+'%</td>'
-        +'<td style="text-align:right;padding:9px 11px">'+fPct(+(c.DTO_POND||0)/100,1)+'</td>'
-        +'<td style="text-align:right;padding:9px 11px">'+fPct(+(c.RIU_PCT||0)/100,1)+'</td>'
-        +'<td style="text-align:right;padding:9px 11px">'+fNum(+(c.SESIONES||0))+'</td>'
+        +'<td style="text-align:right;padding:9px 11px">'+c.DTO_POND.toFixed(1)+'%</td>'
+        +'<td style="text-align:right;padding:9px 11px">'+c.RIU_PCT_V.toFixed(1)+'%</td>'
+        +'<td style="text-align:right;padding:9px 11px">'+fNum(c.SESIONES)+'</td>'
         +'<td style="padding:9px 11px"><span style="background:'+dx.color+';color:#fff;font-size:10px;font-weight:700;border-radius:4px;padding:2px 8px">'+dx.label+'</span></td>'
         +'</tr>'
         +'<tr id="cal-drill-'+c.DEAL_CONTAINER_ID+'" style="display:none">'
         +'<td colspan="8" style="padding:0;background:#f8faff;border-bottom:2px solid #3483FA">'
         +'<div style="padding:14px 24px 16px">'
         +'<div style="display:flex;gap:8px;margin-bottom:10px">'
-        +'<button onclick="calShowDrillTab(\''+c.DEAL_CONTAINER_ID+'\',\'TIPO_OFERTA\',this)" class="pill active">Tipo Oferta</button>'
-        +'<button onclick="calShowDrillTab(\''+c.DEAL_CONTAINER_ID+'\',\'SEGMENTO\',this)" class="pill">Segmento</button>'
-        +'<button onclick="calShowDrillTab(\''+c.DEAL_CONTAINER_ID+'\',\'AGG3\',this)" class="pill">AGG3</button>'
+        +'<button onclick="calShowDrillTab(\''+c.DEAL_CONTAINER_ID+'\',\'FIN\',this)" class="pill active">Financiación</button>'
+        +'<button onclick="calShowDrillTab(\''+c.DEAL_CONTAINER_ID+'\',\'TIPO\',this)" class="pill">Tipo Oferta</button>'
+        +'<button onclick="calShowDrillTab(\''+c.DEAL_CONTAINER_ID+'\',\'RIU\',this)" class="pill">RIU</button>'
         +'</div>'
         +'<div id="cal-drill-content-'+c.DEAL_CONTAINER_ID+'"></div>'
         +'</div></td></tr>';
@@ -1629,36 +1779,57 @@ function renderCalidadContainers(){
 }
 
 function calBuildDrillTable(cid, dim){
-  var drillMap={};
-  (C.drill||[]).forEach(function(r){
-    if(!drillMap[r.deal_container_id]) drillMap[r.deal_container_id]=[];
-    drillMap[r.deal_container_id].push(r);
-  });
-  var rows=(drillMap[cid]||[]).filter(function(r){return r.dimension===dim&&r.exhibidos>0;});
-  rows.sort(function(a,b){return (b.gmv_items||0)-(a.gmv_items||0);});
+  // Buscar container en la lista
+  var exhibMap={};
+  (C.exhibidos_container||[]).forEach(function(r){exhibMap[r.CONTAINER_DEAL_ID]=r;});
+  var vc=(C.visitados_container||[]).find(function(r){return r.CONTAINER_DEAL_ID===cid;})||{};
+  var ec=exhibMap[cid]||{};
+
+  var rows=[];
+  if(dim==='FIN'){
+    var vTot=+(vc.VIEWED_ITEMS||0), eTot=+(ec.ITEMS_EXHIBIDOS||0);
+    rows=[
+      {cat:'Cofinanciado ML', e:+(ec.OFFER_COFINANCED||0), v:+(vc.OFFER_COFINANCED||0), g:+(vc.OFFER_COFINANCED_GMV||0)},
+      {cat:'100% Seller',     e:+(ec.OFFER_SELLER||0),     v:+(vc.OFFER_SELLER||0),     g:+(vc.OFFER_SELLER_GMV||0)},
+      {cat:'Sin Oferta',      e:eTot-(+(ec.REAL_OFFER||0)), v:+(vc.NO_OFFER_ITEMS||0), g:+(vc.NO_OFFER_GMV_ITEMS||0)}
+    ];
+  } else if(dim==='TIPO'){
+    rows=[
+      {cat:'Pre-negociada', e:+(ec.OFFER_PRENEGOTIATED||0), v:+(vc.OFFER_PRENEGOTIATED||0), g:+(vc.OFFER_PRENEGOTIATED_GMV||0)},
+      {cat:'Tiers',         e:+(ec.OFFER_TIERS||0),         v:+(vc.OFFER_TIERS||0),         g:+(vc.OFFER_TIERS_GMV||0)},
+      {cat:'Smart',         e:+(ec.OFFER_SMART||0),         v:+(vc.OFFER_SMART||0),         g:+(vc.OFFER_SMART_GMV||0)},
+      {cat:'Custom',        e:+(ec.OFFER_CUSTOM||0),        v:+(vc.OFFER_CUSTOM||0),        g:+(vc.OFFER_CUSTOM_GMV||0)},
+      {cat:'DOD',           e:+(ec.OFFER_DOD||0),           v:+(vc.OFFER_DOD||0),           g:+(vc.OFFER_DOD_GMV||0)},
+      {cat:'Lightning',     e:+(ec.OFFER_LIGHTNING||0),     v:+(vc.OFFER_LIGHTNING||0),     g:+(vc.OFFER_LIGHTNING_GMV||0)},
+      {cat:'Otros',         e:+(ec.OFFER_OTHERS||0),        v:+(vc.OFFER_OTHERS||0),        g:+(vc.OFFER_OTHERS_GMV||0)},
+      {cat:'Sin Oferta',    e:+(ec.ITEMS_EXHIBIDOS||0)-(+(ec.REAL_OFFER||0)), v:+(vc.NO_OFFER_ITEMS||0), g:+(vc.NO_OFFER_GMV_ITEMS||0)}
+    ];
+  } else { // RIU
+    rows=[
+      {cat:'High / Boost',  e:+(ec.HIGH_ITEMS||0), v:+(vc.HIGH_ITEMS||0), g:+(vc.HIGH_GMV_ITEMS||0)},
+      {cat:'Mid',           e:+(ec.MID_ITEMS||0),  v:+(vc.MID_ITEMS||0),  g:+(vc.MID_GMV_ITEMS||0)},
+      {cat:'Low / Out',     e:+(ec.LOW_ITEMS||0),  v:+(vc.LOW_ITEMS||0),  g:+(vc.LOW_GMV_ITEMS||0)}
+    ];
+  }
+
+  rows=rows.filter(function(r){return r.e>0||r.v>0||r.g>0;});
   if(!rows.length) return '<p style="color:#aaa;padding:8px;font-size:12px">Sin datos</p>';
-  var scores=rows.map(function(r){return (r.exhibidos>0?(r.visitados/r.exhibidos)*(r.gmv_items/Math.max(r.visitados,1)):0);});
-  var maxS=Math.max.apply(null,scores), minS=Math.min.apply(null,scores);
+
   var h='<div class="table-card" style="margin-top:6px"><div class="table-wrap"><table>'
-    +'<thead><tr><th>Categoría</th><th style="text-align:right">Exhibidos</th>'
-    +'<th style="text-align:center;width:60px"></th><th style="text-align:right">Visitados</th>'
-    +'<th style="text-align:center;width:60px"></th><th style="text-align:right">Items GMV</th></tr></thead><tbody>';
-  rows.forEach(function(r,i){
-    var s=scores[i];
-    var isBest=s===maxS&&maxS>0, isWorst=s===minS&&rows.length>1&&minS!==maxS;
-    var bg=isBest?'#E8F5E9':isWorst?'#FFEBEE':'transparent';
-    var pV=r.exhibidos>0?(r.visitados/r.exhibidos*100).toFixed(1)+'%':'—';
-    var pC=r.visitados>0?(r.gmv_items/r.visitados*100).toFixed(1)+'%':'—';
-    var vCol=isBest?'#00A650':isWorst?'#D32F2F':'#666';
-    var badge=isBest?' <span style="font-size:9px;background:#00A650;color:#fff;border-radius:3px;padding:1px 5px">mejor</span>'
-             :isWorst?' <span style="font-size:9px;background:#D32F2F;color:#fff;border-radius:3px;padding:1px 5px">peor</span>':'';
-    h+='<tr style="background:'+bg+'">'
-      +'<td style="padding:7px 10px;font-weight:'+(isBest||isWorst?700:500)+'">'+r.categoria+badge+'</td>'
-      +'<td style="text-align:right;padding:7px 10px">'+fNum(r.exhibidos)+'</td>'
-      +'<td style="text-align:center;padding:4px;font-size:11px;font-weight:700;color:'+vCol+'">'+pV+'</td>'
-      +'<td style="text-align:right;padding:7px 10px">'+fNum(r.visitados)+'</td>'
-      +'<td style="text-align:center;padding:4px;font-size:11px;font-weight:700;color:'+vCol+'">'+pC+'</td>'
-      +'<td style="text-align:right;padding:7px 10px">'+fNum(r.gmv_items)+'</td>'
+    +'<thead><tr><th>Categoría</th>'
+    +'<th style="text-align:right">Exhibidos</th><th style="text-align:center;width:55px"></th>'
+    +'<th style="text-align:right">Visitados</th><th style="text-align:center;width:55px"></th>'
+    +'<th style="text-align:right">Items GMV</th></tr></thead><tbody>';
+  rows.forEach(function(r){
+    var pV=r.e>0?(r.v/r.e*100).toFixed(1)+'%':'—';
+    var pC=r.v>0?(r.g/r.v*100).toFixed(1)+'%':'—';
+    h+='<tr>'
+      +'<td style="padding:7px 10px;font-weight:500">'+r.cat+'</td>'
+      +'<td style="text-align:right;padding:7px 10px">'+fNum(r.e)+'</td>'
+      +'<td style="text-align:center;padding:4px;font-size:11px;color:#666">'+pV+'</td>'
+      +'<td style="text-align:right;padding:7px 10px">'+fNum(r.v)+'</td>'
+      +'<td style="text-align:center;padding:4px;font-size:11px;color:#666">'+pC+'</td>'
+      +'<td style="text-align:right;padding:7px 10px">'+fNum(r.g)+'</td>'
       +'</tr>';
   });
   return h+'</tbody></table></div></div>';
