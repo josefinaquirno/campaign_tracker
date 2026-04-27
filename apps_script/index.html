@@ -178,21 +178,18 @@
     <div class="tab-panel" id="panel-ms">
       <div class="section-label">MAIN SLIDER <span class="badge" id="ms-badge-period">—</span></div>
 
-      <div class="toggle-row" id="ms-toggles"></div>
+      <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-bottom:16px">
+        <div class="toggle-row" style="margin:0" id="ms-toggles"></div>
+        <div style="width:1px;height:20px;background:#ddd"></div>
+        <div class="toggle-row" style="margin:0" id="ms-seg-toggles"></div>
+      </div>
 
       <div class="kpi-grid" id="ms-kpis"></div>
 
-      <div class="charts-2">
-        <div class="chart-card">
-          <div class="chart-title">CTR diario (%)</div>
-          <div class="chart-sub">Evolución a lo largo de la campaña</div>
-          <div class="chart-wrap"><canvas id="cMS_CTR"></canvas></div>
-        </div>
-        <div class="chart-card">
-          <div class="chart-title">Clicks y Prints diarios</div>
-          <div class="chart-sub">Volumen de actividad</div>
-          <div class="chart-wrap"><canvas id="cMS_VOL"></canvas></div>
-        </div>
+      <div class="chart-card" style="margin-bottom:16px">
+        <div class="chart-title">CTR · Clicks · Prints diarios</div>
+        <div class="chart-sub">Barras = Clicks (amarillo) y Prints (gris) · Línea = CTR % (eje derecho)</div>
+        <div class="chart-wrap" style="height:240px"><canvas id="cMS_COMBO"></canvas></div>
       </div>
 
       <div class="table-card">
@@ -212,11 +209,17 @@
 
       <div class="toggle-row" id="ldg-toggles"></div>
 
-      <div class="kpi-grid" id="ldg-kpis"></div>
+      <div class="section-label" style="margin-top:4px">Engagement</div>
+      <div class="kpi-grid" id="ldg-kpis-eng"></div>
 
-      <!-- FUNNEL -->
+      <div class="section-label" style="margin-top:4px">Performance</div>
+      <div class="kpi-grid" id="ldg-kpis-perf"></div>
+
+      <!-- FUNNEL CHART -->
       <div class="section-label" style="margin-top:4px">Funnel de usuarios</div>
-      <div class="funnel-row" id="ldg-funnel"></div>
+      <div class="chart-card" style="margin-bottom:16px">
+        <div class="chart-wrap" style="height:150px"><canvas id="cLDG_FUNNEL"></canvas></div>
+      </div>
 
       <div class="charts-2">
         <div class="chart-card">
@@ -349,7 +352,9 @@ var CNT_VIEW   = 'container';
 var CMP_IDX    = '';
 var SORT_COL   = { ms:'clicks', ldg:'sessions', cnt:'sessions' };
 var SORT_ASC   = { ms:false, ldg:false, cnt:false };
-var MS_BUCKET  = 'ALL';
+var MS_BUCKET     = 'ALL';
+var MS_SEG_FILTER = 'ALL';
+var MS_BUCKET_OPEN = null;
 var SUM_MS_FILTER = 'PRINCIPAL';
 
 var C1='#FFE600', C2='#1a1a2e', C3='#4caf50', C4='#e03131', C5='#2196F3', C6='#FF9800';
@@ -698,6 +703,12 @@ function setMSBucket(v,btn){
   btn.classList.add('active');
   renderMS();
 }
+function setMSSeg(v,btn){
+  MS_SEG_FILTER=v;
+  btn.parentNode.querySelectorAll('.pill').forEach(function(b){b.classList.remove('active');});
+  btn.classList.add('active');
+  renderMS();
+}
 
 function renderMS(){
   var rows = D.ms||[];
@@ -712,8 +723,14 @@ function renderMS(){
   });
   document.getElementById('ms-toggles').innerHTML=pillHtml;
 
-  // Filter by bucket
+  var segHtml='<button class="pill '+(MS_SEG_FILTER==='ALL'?'active':'')+'" onclick="setMSSeg(\'ALL\',this)">TODOS</button>'
+    +'<button class="pill '+(MS_SEG_FILTER==='SEGMENTADO'?'active':'')+'" onclick="setMSSeg(\'SEGMENTADO\',this)">SEGMENTADO</button>'
+    +'<button class="pill '+(MS_SEG_FILTER==='NO SEGMENTADO'?'active':'')+'" onclick="setMSSeg(\'NO SEGMENTADO\',this)">NO SEGMENTADO</button>';
+  document.getElementById('ms-seg-toggles').innerHTML=segHtml;
+
+  // Filter by bucket then by segmentation
   var filtered = MS_BUCKET==='ALL' ? rows : rows.filter(function(r){ return getBucket(r.line_item)===MS_BUCKET; });
+  if(MS_SEG_FILTER!=='ALL') filtered=filtered.filter(function(r){ return r.segmentation===MS_SEG_FILTER; });
 
   // Aggregate totals
   var tot = filtered.reduce(function(a,r){ a.clicks+=+r.clicks||0; a.prints+=+r.prints||0; return a; },{clicks:0,prints:0});
@@ -760,11 +777,9 @@ function renderMS(){
 
   // KPIs
   var kpiCfg = [
-    {lbl:'CLICKS (TOTAL)',  val:fNum(tot.clicks),    sub:'Acumulado campaña', tgtKey:null, hCur:tot.clicks, hRef:histTot.clicks},
-    {lbl:'PRINTS (TOTAL)',  val:fNum(tot.prints),    sub:'Viewed prints acumulados', tgtKey:null, hCur:tot.prints, hRef:histTot.prints},
     {lbl:'CTR',             val:fPct(tot.ctr,2),     sub:'Clicks / Prints', tgtKey:'ctr', raw:tot.ctr, hCur:tot.ctr, hRef:histTot.ctr},
-    {lbl:'% PRINTS SEG.',   val:pctPrintsSeg!=null?fPct(pctPrintsSeg,2):'—', sub:'Prints segmentados / total', tgtKey:null},
     {lbl:'CTR SEGMENTADO',  val:ctrSeg!=null?fPct(ctrSeg,2):'—',             sub:'Clicks / Prints (seg.)', tgtKey:null},
+    {lbl:'% PRINTS SEG.',   val:pctPrintsSeg!=null?fPct(pctPrintsSeg,2):'—', sub:'Prints segmentados / total', tgtKey:null},
     {lbl:'% MS SEGMENTADOS',val:pctLISeg!=null?fPct(pctLISeg,2):'—',         sub:segLIs+' de '+totalLIs+' line items', tgtKey:null}
   ];
   document.getElementById('ms-kpis').innerHTML = kpiCfg.map(function(k){
@@ -784,34 +799,93 @@ function renderMS(){
   var prtData = dates.map(function(d){ return byDate[d].prints; });
   var lbls    = dates.map(fDate);
 
-  mkLine('cMS_CTR', lbls, [{label:'CTR %',data:ctrData,borderColor:C1,backgroundColor:'rgba(255,230,0,0.12)',fill:true,tension:.3,pointRadius:4}], '%');
-  mkBar('cMS_VOL', lbls, [
-    {label:'Clicks', data:clkData, backgroundColor:C1, stack:'s'},
-    {label:'Prints', data:prtData, backgroundColor:'rgba(26,26,46,0.15)', stack:'p'}
-  ]);
-
-  // Table by line item
-  var liMap = {};
-  filtered.forEach(function(r){ var k=r.line_item; if(!liMap[k]) liMap[k]={name:k,bucket:getBucket(r.line_item),clicks:0,prints:0}; liMap[k].clicks+=+r.clicks||0; liMap[k].prints+=+r.prints||0; });
-  var lis = Object.values(liMap).sort(function(a,b){
-    var av=a[SORT_COL.ms]||0, bv=b[SORT_COL.ms]||0;
-    return SORT_ASC.ms?av-bv:bv-av;
+  if(CH['cMS_COMBO']) CH['cMS_COMBO'].destroy();
+  CH['cMS_COMBO'] = new Chart(document.getElementById('cMS_COMBO').getContext('2d'), {
+    data: {
+      labels: lbls,
+      datasets: [
+        {
+          type: 'bar', label: 'Prints', data: prtData, yAxisID: 'yVol',
+          backgroundColor: 'rgba(26,26,46,0.18)', stack: 'vol', order: 2
+        },
+        {
+          type: 'bar', label: 'Clicks', data: clkData, yAxisID: 'yVol',
+          backgroundColor: 'rgba(255,230,0,0.85)', stack: 'vol', order: 2
+        },
+        {
+          type: 'line', label: 'CTR %', data: ctrData, yAxisID: 'yCTR',
+          borderColor: '#e03131', backgroundColor: 'transparent',
+          tension: .3, pointRadius: 4, borderWidth: 2, order: 1
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { font: { size: 10 }, boxWidth: 10, padding: 8 } } },
+      scales: {
+        x:    { grid: { display: false }, ticks: { font: { size: 10 }, maxRotation: 45 } },
+        yVol: { position: 'left',  grid: { color: '#f0f0f0' }, ticks: { font: { size: 10 } }, title: { display: false }, stacked: true },
+        yCTR: { position: 'right', grid: { drawOnChartArea: false }, ticks: { font: { size: 10 }, callback: function(v){ return v+'%'; } }, title: { display: false } }
+      }
+    }
   });
+
+  // Table by bucket (grouped, with drill-down per LI)
+  var liMap = {};
+  filtered.forEach(function(r){
+    var k=r.line_item;
+    if(!liMap[k]) liMap[k]={name:k,bucket:getBucket(r.line_item),clicks:0,prints:0};
+    liMap[k].clicks+=+r.clicks||0; liMap[k].prints+=+r.prints||0;
+  });
+  var lis = Object.values(liMap);
+  lis.forEach(function(li){ li.ctr=li.prints>0?li.clicks/li.prints:0; });
   document.getElementById('ms-tbl-badge').textContent = lis.length+' line items';
 
-  var cols = [{k:'bucket',l:'Bucket',num:false},{k:'name',l:'Line Item',num:false},{k:'clicks',l:'Clicks',num:true},{k:'prints',l:'Prints',num:true},{k:'ctr',l:'CTR',num:true,rate:true}];
-  lis.forEach(function(li){ li.ctr=li.prints>0?li.clicks/li.prints:0; });
-
+  // Agrupar por bucket
+  var BUCKET_ORDER=['PRINCIPAL','HIGH','MID','OTHER'];
   var BUCKET_COLOR={'PRINCIPAL':'#1a1a2e','HIGH':'#4caf50','MID':'#FF9800','OTHER':'#aaa'};
-  var h='<table><thead><tr>'+cols.map(function(c){
-    var ar=SORT_COL.ms===c.k?(SORT_ASC.ms?' ▲':' ▼'):'';
-    return '<th onclick="sortMS(\''+c.k+'\')" style="'+(c.num?'text-align:right':'')+'">'+c.l+ar+'</th>';
-  }).join('')+'</tr></thead><tbody>';
+  var bucketMap={};
   lis.forEach(function(li){
-    h+='<tr>'+cols.map(function(c){
-      if(c.k==='bucket') return '<td><span style="background:'+(BUCKET_COLOR[li.bucket]||'#aaa')+';color:#fff;padding:2px 7px;border-radius:3px;font-size:10px;font-weight:700">'+li.bucket+'</span></td>';
-      return '<td>'+(c.rate?fPct(li[c.k],2):c.num?fNum(li[c.k]):li[c.k])+'</td>';
-    }).join('')+'</tr>';
+    var b=li.bucket;
+    if(!bucketMap[b]) bucketMap[b]={clicks:0,prints:0,lis:[]};
+    bucketMap[b].clicks+=li.clicks; bucketMap[b].prints+=li.prints;
+    bucketMap[b].lis.push(li);
+  });
+  BUCKET_ORDER.forEach(function(b){
+    if(bucketMap[b]) bucketMap[b].lis.sort(function(a,c){return c.clicks-a.clicks;});
+  });
+
+  var h='<table><thead><tr>'
+    +'<th>Bucket</th>'
+    +'<th style="text-align:right">Clicks</th>'
+    +'<th style="text-align:right">Prints</th>'
+    +'<th style="text-align:right">CTR</th>'
+    +'</tr></thead><tbody>';
+
+  BUCKET_ORDER.forEach(function(b){
+    var bg=bucketMap[b]; if(!bg) return;
+    var bCtr=bg.prints>0?bg.clicks/bg.prints:0;
+    var isOpen=MS_BUCKET_OPEN===b;
+    var chip='<span style="background:'+(BUCKET_COLOR[b]||'#aaa')+';color:#fff;padding:2px 8px;border-radius:3px;font-size:10px;font-weight:700">'+b+'</span>';
+    h+='<tr style="cursor:pointer;background:#f8f8f8;border-top:2px solid '+(BUCKET_COLOR[b]||'#aaa')+'" onclick="toggleMSBucket(\''+b+'\')">'
+      +'<td style="padding:9px 10px;font-weight:700">'+chip
+      +' <span style="font-size:10px;color:#888;margin-left:6px">'+bg.lis.length+' LIs</span>'
+      +' <span style="font-size:10px;color:#888;float:right">'+(isOpen?'▲':'▼')+'</span>'
+      +'</td>'
+      +'<td style="text-align:right;padding:9px 10px;font-weight:700">'+fNum(bg.clicks)+'</td>'
+      +'<td style="text-align:right;padding:9px 10px;font-weight:700">'+fNum(bg.prints)+'</td>'
+      +'<td style="text-align:right;padding:9px 10px;font-weight:700">'+fPct(bCtr,2)+'</td>'
+      +'</tr>';
+    if(isOpen){
+      bg.lis.forEach(function(li){
+        h+='<tr style="background:#fafafa">'
+          +'<td style="padding:7px 10px 7px 28px;color:#555;font-size:11px">'+li.name+'</td>'
+          +'<td style="text-align:right;padding:7px 10px;font-size:11px">'+fNum(li.clicks)+'</td>'
+          +'<td style="text-align:right;padding:7px 10px;font-size:11px">'+fNum(li.prints)+'</td>'
+          +'<td style="text-align:right;padding:7px 10px;font-size:11px">'+fPct(li.ctr,2)+'</td>'
+          +'</tr>';
+      });
+    }
   });
   h+='</tbody></table>';
   document.getElementById('ms-tbl-body').innerHTML=h;
@@ -819,6 +893,7 @@ function renderMS(){
 }
 
 function sortMS(col){ if(SORT_COL.ms===col) SORT_ASC.ms=!SORT_ASC.ms; else{SORT_COL.ms=col;SORT_ASC.ms=false;} renderMS(); }
+function toggleMSBucket(b){ MS_BUCKET_OPEN=(MS_BUCKET_OPEN===b?null:b); renderMS(); }
 
 // ──────────────────────────────────────────────
 // LANDING
@@ -847,23 +922,21 @@ function renderLanding(){
   // Aggregate by date
   var byDate={};
   filtered.forEach(function(r){
-    var d=r.date||r.DATE; if(!byDate[d]) byDate[d]={sessions:0,nmv:0,orders:0,transactions:0,nsi:0,users_landing:0,users_container:0,users_vip:0,buyers:0};
+    var d=r.date||r.DATE; if(!byDate[d]) byDate[d]={sessions:0,nmv:0,orders:0,transactions:0,nsi:0,buyers:0};
     var b=byDate[d];
     b.sessions+=+r.sessions||0; b.nmv+=+r.nmv||0; b.orders+=+r.orders||0; b.transactions+=+r.transactions||0;
-    b.nsi+=+r.nsi||0; b.users_landing+=+r.users_landing||0; b.users_container+=+r.users_container||0;
-    b.users_vip+=+r.users_vip||0; b.buyers+=+r.buyers||0;
+    b.nsi+=+r.nsi||0; b.buyers+=+r.buyers||0;
   });
   var dates = Object.keys(byDate).sort();
   var tot = dates.reduce(function(a,d){ var b=byDate[d];
     a.sessions+=b.sessions; a.nmv+=b.nmv; a.orders+=b.orders; a.transactions+=b.transactions;
-    a.nsi+=b.nsi; a.users_landing+=b.users_landing; a.users_container+=b.users_container;
-    a.users_vip+=b.users_vip; a.buyers+=b.buyers; return a;
-  },{sessions:0,nmv:0,orders:0,transactions:0,nsi:0,users_landing:0,users_container:0,users_vip:0,buyers:0});
+    a.nsi+=b.nsi; a.buyers+=b.buyers; return a;
+  },{sessions:0,nmv:0,orders:0,transactions:0,nsi:0,buyers:0});
 
   tot.cvr  = tot.sessions>0 ? tot.transactions/tot.sessions : 0;
   tot.nasp = tot.orders>0   ? tot.nmv/tot.orders : 0;
   tot.nsit = tot.transactions>0 ? tot.nsi/tot.transactions : 0;
-  tot.ctr  = tot.users_landing>0 ? tot.users_container/tot.users_landing : 0;
+  tot.ctr  = null; // CTR viene de otra query
 
   // Share vs total site
   var tsMap={};
@@ -885,72 +958,143 @@ function renderLanding(){
     share_sessions: tgtAvg(tgt.share_sessions,   tgtDates, dates)
   };
 
-  // KPIs
-  var kpiCfg = [
-    {lbl:'SESIONES',     val:fNum(tot.sessions),    sub:'Acumuladas', raw:tot.sessions, tgtKey:'sessions'},
-    {lbl:'NMV (USD)',    val:fNMV(tot.nmv),          sub:'168hs atrib.', raw:tot.nmv, tgtKey:'nmv'},
-    {lbl:'CTR',          val:fPct(tot.ctr,2),        sub:'Users container / Users landing', raw:tot.ctr, tgtKey:'ctr'},
-    {lbl:'CVR',          val:fPct(tot.cvr,2),        sub:'Transacciones / Sesiones', raw:tot.cvr, tgtKey:'cvr'},
-    {lbl:'NASP',         val:fNMV(tot.nasp),         sub:'NMV / Orders', raw:null, tgtKey:null},
-    {lbl:'NSI/T',        val:tot.nsit?tot.nsit.toFixed(2):'—', sub:'NSI / Transactions', raw:null, tgtKey:null},
-    {lbl:'ORDERS',       val:fNum(tot.orders),       sub:'Acumuladas', raw:null, tgtKey:null},
-    {lbl:'BUYERS',       val:fNum(tot.buyers),       sub:'Únicos', raw:null, tgtKey:null},
-    {lbl:'SHARE SESS',   val:shareSess!=null?fPct(shareSess,2):'—', sub:'vs total site', raw:shareSess, tgtKey:'share_sessions'},
-    {lbl:'SHARE NMV',    val:shareNMV!=null?fPct(shareNMV,2):'—',  sub:'vs total site', raw:null, tgtKey:null}
-  ];
-  document.getElementById('ldg-kpis').innerHTML=kpiCfg.map(function(k){
-    var tgtStr='',cls='';
-    if(k.tgtKey&&tgtVal[k.tgtKey]!=null&&k.raw!=null){
-      var pct=(k.raw-tgtVal[k.tgtKey])/tgtVal[k.tgtKey]*100;
-      cls=pct>=0?'vs-target-ok':pct>=-10?'vs-target-warn':'vs-target-bad';
-      var tc=pct>=0?'ok':pct>=-10?'warn':'bad';
-      var isR=k.tgtKey==='ctr'||k.tgtKey==='share_sessions';
-      tgtStr='<div class="kpi-target '+tc+'">'+(pct>=0?'▲ ':'▼ ')+Math.abs(pct).toFixed(1)+'% vs target '+(isR?fPct(tgtVal[k.tgtKey],2):fNum(tgtVal[k.tgtKey]))+'</div>';
-    }
-    return '<div class="kpi-card '+cls+'"><div class="kpi-label">'+k.lbl+'</div><div class="kpi-val">'+k.val+'</div><div class="kpi-sub">'+k.sub+'</div>'+tgtStr+'</div>';
-  }).join('');
+  // KPIs — función de render compartida
+  function renderKpiGroup(cfgArr, elId){
+    document.getElementById(elId).innerHTML=cfgArr.map(function(k){
+      var tgtStr='',cls='';
+      if(k.tgtKey&&tgtVal[k.tgtKey]!=null&&k.raw!=null){
+        var pct=(k.raw-tgtVal[k.tgtKey])/tgtVal[k.tgtKey]*100;
+        cls=pct>=0?'vs-target-ok':pct>=-10?'vs-target-warn':'vs-target-bad';
+        var tc=pct>=0?'ok':pct>=-10?'warn':'bad';
+        var isR=k.tgtKey==='ctr'||k.tgtKey==='share_sessions';
+        tgtStr='<div class="kpi-target '+tc+'">'+(pct>=0?'▲ ':'▼ ')+Math.abs(pct).toFixed(1)+'% vs target '+(isR?fPct(tgtVal[k.tgtKey],2):fNum(tgtVal[k.tgtKey]))+'</div>';
+      }
+      return '<div class="kpi-card '+cls+'"><div class="kpi-label">'+k.lbl+'</div><div class="kpi-val">'+k.val+'</div><div class="kpi-sub">'+k.sub+'</div>'+tgtStr+'</div>';
+    }).join('');
+  }
 
-  // Funnel
-  var fSteps=[
-    {val:fNum(tot.users_landing),   lbl:'Llegan a landing', pct:null},
-    {val:fNum(tot.users_container), lbl:'Llegan a container', pct:tot.users_landing>0?fPct(tot.users_container/tot.users_landing,1):null},
-    {val:fNum(tot.users_vip),       lbl:'Llegan a VIP',      pct:tot.users_container>0?fPct(tot.users_vip/tot.users_container,1):null}
+  // Engagement
+  var engCfg = [
+    {lbl:'SESIONES',    val:fNum(tot.sessions),                    sub:'Acumuladas',                raw:tot.sessions, tgtKey:'sessions'},
+    {lbl:'SHARE SESS',  val:shareSess!=null?fPct(shareSess,2):'—', sub:'vs total site',             raw:shareSess,     tgtKey:'share_sessions'},
+    {lbl:'CVR',         val:fPct(tot.cvr,2),                       sub:'Transacciones / Sesiones',  raw:tot.cvr,       tgtKey:'cvr'}
   ];
-  var fHTML='';
-  fSteps.forEach(function(s,i){
-    if(i>0) fHTML+='<div class="funnel-arrow">→</div>';
-    fHTML+='<div class="funnel-step"><div class="f-val">'+s.val+'</div><div class="f-lbl">'+s.lbl+'</div>'+(s.pct?'<div class="f-pct">'+s.pct+' drop-in</div>':'')+'</div>';
+  // Performance
+  var perfCfg = [
+    {lbl:'NMV (USD)',   val:fNMV(tot.nmv),                                        sub:'168hs atrib.',                            raw:null, tgtKey:null},
+    {lbl:'SHARE NMV',   val:shareNMV!=null?fPct(shareNMV,2):'—',                 sub:'vs total site',                           raw:null, tgtKey:null},
+    {lbl:'NSI',         val:fNum(tot.nsi),                                        sub:'Acumulado',                               raw:null, tgtKey:null},
+    {lbl:'ORDERS',      val:fNum(tot.orders),                                     sub:'Acumuladas',                              raw:null, tgtKey:null},
+    {lbl:'BUYERS',      val:fNum(tot.buyers),                                     sub:'Únicos',                                  raw:null, tgtKey:null},
+    {lbl:'TRX',         val:fNum(tot.transactions),                               sub:'Transacciones',                           raw:null, tgtKey:null},
+    {lbl:'NASP',        val:fNMV(tot.nasp),                                       sub:'NMV / Orders',                            raw:null, tgtKey:null},
+    {lbl:'NSI/T',       val:tot.nsit?tot.nsit.toFixed(2):'—',                    sub:'NSI / Transactions',                      raw:null, tgtKey:null}
+  ];
+
+  renderKpiGroup(engCfg,  'ldg-kpis-eng');
+  renderKpiGroup(perfCfg, 'ldg-kpis-perf');
+
+  // Funnel chart — solo si hay datos de usuarios (query con CTR)
+  if(CH['cLDG_FUNNEL']) CH['cLDG_FUNNEL'].destroy();
+  var fLabels=['Sesiones','Transacciones','Buyers'];
+  var fVals=[tot.sessions, tot.transactions, tot.buyers];
+  var fColors=['rgba(255,230,0,0.85)','rgba(255,152,0,0.85)','rgba(76,175,80,0.85)'];
+  CH['cLDG_FUNNEL']=new Chart(document.getElementById('cLDG_FUNNEL').getContext('2d'),{
+    type:'bar',
+    data:{
+      labels:fLabels,
+      datasets:[{data:fVals,backgroundColor:fColors,borderRadius:4,borderSkipped:false}]
+    },
+    options:{
+      indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{label:function(ctx){
+          var v=ctx.raw, i=ctx.dataIndex;
+          var prev=i>0?fVals[i-1]:null;
+          var pct=prev>0?' ('+( v/prev*100).toFixed(1)+'% del paso anterior)':'';
+          return fNum(v)+pct;
+        }}}
+      },
+      scales:{
+        x:{display:false},
+        y:{grid:{display:false},ticks:{font:{size:11},color:'#555'}}
+      }
+    }
   });
-  document.getElementById('ldg-funnel').innerHTML=fHTML;
 
   // Charts
   var lbls=dates.map(fDate);
-  if(LDG_FILTER==='ALL'){
-    // By landing name
-    var ldgNames=[]; (D.landing||[]).forEach(function(r){if(ldgNames.indexOf(r.landing_name)<0)ldgNames.push(r.landing_name);});
-    var sessDS=ldgNames.map(function(n,i){
-      return {label:n,data:dates.map(function(d){
-        return (D.landing||[]).filter(function(r){return r.landing_name===n&&(r.date||r.DATE)===d;}).reduce(function(s,r){return s+(+r.sessions||0);},0);
-      }),borderColor:PALETTE[i%PALETTE.length],backgroundColor:'transparent',tension:.3,pointRadius:4};
-    });
-    var nmvDS=ldgNames.map(function(n,i){
-      return {label:n,data:dates.map(function(d){
-        return (D.landing||[]).filter(function(r){return r.landing_name===n&&(r.date||r.DATE)===d;}).reduce(function(s,r){return s+(+r.nmv||0);},0);
-      }),borderColor:PALETTE[i%PALETTE.length],backgroundColor:'transparent',tension:.3,pointRadius:4};
-    });
-    var tSessLine=tgtLine(tgt.sessions,tgtDates,dates), tNMVLine=tgtLine(tgt.nmv,tgtDates,dates);
-    mkLine('cLDG_SESS',lbls,sessDS.concat(tSessLine?[tgtDS(tSessLine)]:[]),'');
-    mkLine('cLDG_NMV',lbls,nmvDS.concat(tNMVLine?[tgtDS(tNMVLine)]:[]),'');
-  } else {
-    var tSessLine=tgtLine(tgt.sessions,tgtDates,dates), tNMVLine=tgtLine(tgt.nmv,tgtDates,dates);
-    mkLine('cLDG_SESS',lbls,[{label:'Sessions',data:dates.map(function(d){return byDate[d].sessions;}),borderColor:C1,backgroundColor:'rgba(255,230,0,0.1)',fill:true,tension:.3,pointRadius:4}].concat(tSessLine?[tgtDS(tSessLine)]:[]),'');
-    mkLine('cLDG_NMV', lbls,[{label:'NMV',    data:dates.map(function(d){return byDate[d].nmv;}),    borderColor:C2,backgroundColor:'rgba(26,26,46,0.08)',fill:true,tension:.3,pointRadius:4}].concat(tNMVLine?[tgtDS(tNMVLine)]:[]),'');
-  }
+
+  // Sesiones chart: barras (actual + target) + línea share
+  var sessActual = dates.map(function(d){ return byDate[d].sessions; });
+  var sessTgt    = tgtLine(tgt.sessions, tgtDates, dates);
+  var sessShare  = dates.map(function(d){
+    var ts = tsMap[d] ? +tsMap[d].ts_sessions : 0;
+    return ts > 0 ? +(byDate[d].sessions / ts * 100).toFixed(3) : null;
+  });
+  if(CH['cLDG_SESS']) CH['cLDG_SESS'].destroy();
+  var sessDatasets = [
+    {type:'bar',  label:'Sesiones', data:sessActual, yAxisID:'ySess',
+     backgroundColor:'rgba(255,230,0,0.85)', borderRadius:3, order:2}
+  ];
+  if(sessTgt) sessDatasets.push(
+    {type:'bar',  label:'Target',   data:sessTgt,    yAxisID:'ySess',
+     backgroundColor:'rgba(180,180,180,0.5)', borderRadius:3, order:2}
+  );
+  sessDatasets.push(
+    {type:'line', label:'Share Sess %', data:sessShare, yAxisID:'yShare',
+     borderColor:'#9B59B6', backgroundColor:'transparent',
+     tension:.3, pointRadius:3, borderWidth:2, order:1}
+  );
+  CH['cLDG_SESS'] = new Chart(document.getElementById('cLDG_SESS').getContext('2d'),{
+    data:{labels:lbls, datasets:sessDatasets},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom',labels:{font:{size:10},boxWidth:10,padding:8}}},
+      scales:{
+        x:     {grid:{display:false}, ticks:{font:{size:10},maxRotation:45}},
+        ySess: {position:'left',  grid:{color:'#f0f0f0'}, ticks:{font:{size:10}}},
+        yShare:{position:'right', grid:{drawOnChartArea:false},
+                ticks:{font:{size:10},callback:function(v){return v.toFixed(2)+'%';}}}
+      }
+    }
+  });
+
+  // NMV chart: barras + línea CVR
+  var nmvActual = dates.map(function(d){ return byDate[d].nmv; });
+  var cvrLine   = dates.map(function(d){
+    var b=byDate[d];
+    return b.sessions>0 ? +(b.transactions/b.sessions*100).toFixed(3) : null;
+  });
+  if(CH['cLDG_NMV']) CH['cLDG_NMV'].destroy();
+  CH['cLDG_NMV'] = new Chart(document.getElementById('cLDG_NMV').getContext('2d'),{
+    data:{
+      labels:lbls,
+      datasets:[
+        {type:'bar',  label:'NMV (USD)', data:nmvActual, yAxisID:'yNMV',
+         backgroundColor:'rgba(255,230,0,0.85)', borderRadius:3, order:2},
+        {type:'line', label:'CVR %',     data:cvrLine,   yAxisID:'yCVR',
+         borderColor:'#2196F3', backgroundColor:'transparent',
+         tension:.3, pointRadius:3, borderWidth:2, order:1}
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom',labels:{font:{size:10},boxWidth:10,padding:8}}},
+      scales:{
+        x:    {grid:{display:false}, ticks:{font:{size:10},maxRotation:45}},
+        yNMV: {position:'left',  grid:{color:'#f0f0f0'}, ticks:{font:{size:10},callback:function(v){return fNMV(v);}}},
+        yCVR: {position:'right', grid:{drawOnChartArea:false},
+               ticks:{font:{size:10},callback:function(v){return v.toFixed(2)+'%';}}}
+      }
+    }
+  });
 
   // Table by day
   document.getElementById('ldg-tbl-badge').textContent=dates.length+' días';
-  var cols2=[{k:'date',l:'Fecha',r:false},{k:'sessions',l:'Sesiones',r:true},{k:'nmv',l:'NMV',r:true,nmv:true},{k:'orders',l:'Orders',r:true},{k:'cvr',l:'CVR',r:true,rate:true},{k:'nasp',l:'NASP',r:true,nmv:true},{k:'buyers',l:'Buyers',r:true},{k:'nsi',l:'NSI',r:true},{k:'ctr',l:'CTR',r:true,rate:true}];
-  var tblRows=dates.map(function(d){var b=byDate[d]; return {date:fDate(d),sessions:b.sessions,nmv:b.nmv,orders:b.orders,cvr:b.sessions>0?b.transactions/b.sessions:0,nasp:b.orders>0?b.nmv/b.orders:0,buyers:b.buyers,nsi:b.nsi,ctr:b.users_landing>0?b.users_container/b.users_landing:0};});
+  var cols2=[{k:'date',l:'Fecha',r:false},{k:'sessions',l:'Sesiones',r:true},{k:'nmv',l:'NMV',r:true,nmv:true},{k:'orders',l:'Orders',r:true},{k:'transactions',l:'TRX',r:true},{k:'cvr',l:'CVR',r:true,rate:true},{k:'nasp',l:'NASP',r:true,nmv:true},{k:'buyers',l:'Buyers',r:true},{k:'nsi',l:'NSI',r:true}];
+  var tblRows=dates.map(function(d){var b=byDate[d]; return {date:fDate(d),sessions:b.sessions,nmv:b.nmv,orders:b.orders,transactions:b.transactions,cvr:b.sessions>0?b.transactions/b.sessions:0,nasp:b.orders>0?b.nmv/b.orders:0,buyers:b.buyers,nsi:b.nsi};});
   var h='<table><thead><tr>'+cols2.map(function(c){return '<th style="'+(c.r?'text-align:right':'')+'">'+c.l+'</th>';}).join('')+'</tr></thead><tbody>';
   tblRows.forEach(function(row){
     h+='<tr>'+cols2.map(function(c){
