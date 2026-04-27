@@ -936,7 +936,14 @@ function renderLanding(){
   tot.cvr  = tot.sessions>0 ? tot.transactions/tot.sessions : 0;
   tot.nasp = tot.orders>0   ? tot.nmv/tot.orders : 0;
   tot.nsit = tot.transactions>0 ? tot.nsi/tot.transactions : 0;
-  tot.ctr  = null; // CTR viene de otra query
+
+  // CTR desde Splinter (query separada)
+  var ctrRows = (D.ctr_landing||[]).filter(function(r){
+    return LDG_FILTER==='ALL' || r.landing_name===LDG_FILTER;
+  }).filter(function(r){ return dates.indexOf(r.date)>=0; });
+  var ctrTotPrints=0, ctrTotClicks=0;
+  ctrRows.forEach(function(r){ ctrTotPrints+=+r.prints||0; ctrTotClicks+=+r.clicks||0; });
+  tot.ctr = ctrTotPrints>0 ? ctrTotClicks/ctrTotPrints : null;
 
   // Share vs total site
   var tsMap={};
@@ -975,9 +982,10 @@ function renderLanding(){
 
   // Engagement
   var engCfg = [
-    {lbl:'SESIONES',    val:fNum(tot.sessions),                    sub:'Acumuladas',                raw:tot.sessions, tgtKey:'sessions'},
-    {lbl:'SHARE SESS',  val:shareSess!=null?fPct(shareSess,2):'—', sub:'vs total site',             raw:shareSess,     tgtKey:'share_sessions'},
-    {lbl:'CVR',         val:fPct(tot.cvr,2),                       sub:'Transacciones / Sesiones',  raw:tot.cvr,       tgtKey:'cvr'}
+    {lbl:'SESIONES',    val:fNum(tot.sessions),                        sub:'Acumuladas',                raw:tot.sessions, tgtKey:'sessions'},
+    {lbl:'SHARE SESS',  val:shareSess!=null?fPct(shareSess,2):'—',     sub:'vs total site',             raw:shareSess,     tgtKey:'share_sessions'},
+    {lbl:'CTR',         val:tot.ctr!=null?fPct(tot.ctr,2):'—',         sub:'Clicks / Prints (Splinter)', raw:tot.ctr,       tgtKey:'ctr'},
+    {lbl:'CVR',         val:fPct(tot.cvr,2),                           sub:'Transacciones / Sesiones',  raw:tot.cvr,       tgtKey:'cvr'}
   ];
   // Performance
   var perfCfg = [
