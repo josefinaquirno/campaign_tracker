@@ -7,6 +7,7 @@
 var GITHUB_RAW_URL            = 'https://raw.githubusercontent.com/josefinaquirno/campaign_tracker/main/docs/data.json';
 var GITHUB_RAW_URL_HISTORICAL = 'https://raw.githubusercontent.com/josefinaquirno/campaign_tracker/main/docs/historical.json';
 var GITHUB_RAW_URL_CALIDAD    = 'https://raw.githubusercontent.com/josefinaquirno/campaign_tracker/main/docs/calidad.json';
+var GITHUB_RAW_URL_OFERTA     = 'https://raw.githubusercontent.com/josefinaquirno/campaign_tracker/main/docs/oferta.json';
 
 function doGet() {
   return HtmlService
@@ -43,19 +44,35 @@ function getJsonData() {
 }
 
 function getCalidadData() {
+  function decodeB64Json(raw) {
+    try { return JSON.parse(Utilities.newBlob(Utilities.base64Decode(JSON.parse(raw))).getDataAsString()); }
+    catch(e) { return JSON.parse(raw); }
+  }
+
   try {
-    var response = UrlFetchApp.fetch(GITHUB_RAW_URL_CALIDAD + '?v=' + Date.now());
-    var raw = response.getContentText();
+    // Intentar primero el formato combinado (calidad.json con oferta + containers)
+    var calidadRaw = UrlFetchApp.fetch(GITHUB_RAW_URL_CALIDAD + '?v=' + Date.now()).getContentText();
+    var calidad = decodeB64Json(calidadRaw);
+
+    // Si calidad.json tiene oferta, es el formato combinado (viejo o transición)
+    if (calidad.oferta && calidad.oferta.length > 0) {
+      return calidad;
+    }
+
+    // Si no, intentar el formato split: oferta.json separado
     try {
-      var decoded = Utilities.newBlob(Utilities.base64Decode(JSON.parse(raw))).getDataAsString();
-      return JSON.parse(decoded);
-    } catch (e2) {
-      return JSON.parse(raw);
+      var ofertaRaw = UrlFetchApp.fetch(GITHUB_RAW_URL_OFERTA + '?v=' + Date.now()).getContentText();
+      var oferta = decodeB64Json(ofertaRaw);
+      return {
+        oferta:       oferta.oferta      || [],
+        containers:   calidad.containers || [],
+        refreshed_at: calidad.refreshed_at || oferta.refreshed_at || ''
+      };
+    } catch(e2) {
+      return calidad;
     }
   } catch (e) {
-    return { camp_tasa_visita:0, tot_exhib:0, tot_visit:0, tot_gmv_i:0,
-             steps:[], financiacion:[], tipo_oferta:[], bench:{},
-             containers:[], drill:[], container_groups:{}, refreshed_at:'' };
+    return { oferta: [], containers: [], refreshed_at: '' };
   }
 }
 

@@ -130,6 +130,51 @@
 
     @media(max-width:1100px){.kpi-grid{grid-template-columns:repeat(3,1fr);}.charts-2{grid-template-columns:1fr;}}
     @media(max-width:700px){.kpi-grid{grid-template-columns:repeat(2,1fr);}}
+
+    /* ── ONE PAGER ── */
+    .op-slide{display:flex;flex-direction:column;background:#fff;color:#1a1a3e;border-radius:6px;overflow:hidden;border:1px solid #e8e8e8;}
+    .op-hdr{display:flex;align-items:center;gap:12px;padding:8px 16px;background:#1a1a3e;border-bottom:3px solid #ffe600;flex-shrink:0;}
+    .op-hdr-date{display:flex;align-items:center;gap:8px;background:#252552;border-radius:6px;padding:4px 12px;margin-left:auto;}
+    .op-dp-lbl{font-size:9px;color:#6666aa;font-weight:700;letter-spacing:1px;text-transform:uppercase;}
+    .op-dp-in{background:transparent;border:none;color:#e0e0ff;font-size:11px;font-weight:600;font-family:'Montserrat',sans-serif;outline:none;width:92px;cursor:pointer;}
+    .op-dp-in::-webkit-calendar-picker-indicator{filter:invert(0.7);cursor:pointer;}
+    .op-body{display:flex;flex:1;min-height:0;}
+    .op-left{width:380px;flex-shrink:0;display:flex;flex-direction:column;border-right:1px solid #eaeaf4;background:#fff;overflow-y:auto;}
+    .op-right{flex:1;display:flex;flex-direction:column;background:#f8f8fc;overflow:hidden;}
+    .op-row-ms{height:110px;flex-shrink:0;border-bottom:1px solid #eaeaf4;}
+    .op-row-landing{height:150px;flex-shrink:0;border-bottom:1px solid #eaeaf4;}
+    .op-row-containers{height:248px;flex-shrink:0;border-bottom:1px solid #eaeaf4;}
+    .op-row-calidad{flex:1;min-height:160px;}
+    .op-sec-lbl{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#666;padding:6px 16px 3px;}
+    .op-dot{width:7px;height:7px;border-radius:2px;flex-shrink:0;}
+    .op-dot-ms{background:#ffe600;}.op-dot-cnt{background:#3483fa;}.op-dot-cal{background:#9c6ef0;}
+    .op-mwrap{padding:0 14px;}
+    .op-mt{width:100%;border-collapse:collapse;}
+    .op-mt thead th{font-size:9px;color:#bbb;font-weight:600;text-transform:uppercase;padding:2px 5px 4px;text-align:right;border-bottom:1px solid #f0f0f8;}
+    .op-mt thead th:first-child{text-align:left;}
+    .op-mt tbody td{padding:5px 5px;font-size:11px;color:#777;border-bottom:1px solid #f8f8fa;}
+    .op-mt tbody tr:last-child td{border-bottom:none;}
+    .op-val{text-align:right;font-size:14px;font-weight:800;color:#1a1a3e;white-space:nowrap;}
+    .op-badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;white-space:nowrap;}
+    .op-pos{background:#e6f9ee;color:#1a8a3e;}.op-neg{background:#fdecea;color:#cc2222;}.op-neut{background:#f0f0fa;color:#9999bb;}
+    .op-chart-wrap{display:flex;flex-direction:column;padding:0 12px 8px;height:100%;}
+    .op-chart-top{display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+    .op-creative-row{display:flex;align-items:center;gap:10px;padding:6px 14px;height:100%;}
+    .op-cblock{display:flex;align-items:center;gap:12px;flex:1;height:100%;border-right:1px solid #eaeaf4;padding-right:12px;overflow:hidden;}
+    .op-cblock:last-child{border-right:none;padding-right:0;}
+    .op-creative-img{height:78px;width:auto;max-width:380px;object-fit:contain;border-radius:4px;flex-shrink:0;}
+    .op-cinfo{display:flex;flex-direction:column;gap:2px;}
+    .op-clbl{font-size:10px;font-weight:700;color:#aaa;letter-spacing:1px;text-transform:uppercase;}
+    .op-ctr-lbl{font-size:10px;color:#aaa;font-weight:600;text-transform:uppercase;}
+    .op-ctr-val{font-size:22px;font-weight:800;color:#1a1a3e;line-height:1.1;}
+    .op-fbtn{font-size:9px;font-weight:700;padding:3px 10px;border-radius:4px;border:1px solid #e0e0f0;background:#f8f8fc;color:#888;cursor:pointer;text-transform:uppercase;letter-spacing:.5px;transition:all .15s;}
+    .op-fbtn:hover{background:#f0f0fa;}.op-fbtn.active{background:#9c6ef0;color:#fff;border-color:#9c6ef0;}
+    .op-ftable{width:100%;border-collapse:collapse;font-size:10px;}
+    .op-ftable thead th{color:#bbb;font-weight:600;font-size:9px;text-transform:uppercase;padding:2px 5px 4px;text-align:right;border-bottom:1px solid #f0f0f8;}
+    .op-ftable thead th:first-child{text-align:left;}
+    .op-ftable tbody tr{border-bottom:1px solid #f8f8fc;}.op-ftable tbody tr:hover{background:#fffbea;}
+    .op-ftable tbody td{padding:4px 5px;color:#666;}
+    .op-fval{text-align:right;font-weight:700;color:#1a1a3e;}.op-fpct{text-align:right;color:#9c6ef0;font-weight:600;}
   </style>
 </head>
 <body>
@@ -154,9 +199,12 @@
   <button class="tab-btn active" onclick="switchTab('summary',this)">Summary</button>
   <button class="tab-btn" onclick="switchTab('ms',this)">Main Slider</button>
   <button class="tab-btn" onclick="switchTab('landing',this)">Landing</button>
+  <button class="tab-btn" onclick="switchTab('landing-orig',this)">Landing attr Acida</button>
   <button class="tab-btn" onclick="switchTab('container',this)">Containers</button>
   <button class="tab-btn" onclick="switchTab('calidad-oferta',this)">Oferta</button>
   <button class="tab-btn" onclick="switchTab('calidad-containers',this)">Calidad Containers</button>
+  <button class="tab-btn" onclick="switchTab('heatmap',this)">HeatMap Home - WIP</button>
+  <button class="tab-btn" onclick="switchTab('pprh',this)">PP RH - WIP</button>
 </div>
 
 <!-- COMPARISON BAR -->
@@ -214,12 +262,6 @@
 
       <div class="section-label" style="margin-top:4px">Performance</div>
       <div class="kpi-grid" id="ldg-kpis-perf"></div>
-
-      <!-- FUNNEL CHART -->
-      <div class="section-label" style="margin-top:4px">Funnel de usuarios</div>
-      <div class="chart-card" style="margin-bottom:16px">
-        <div class="chart-wrap" style="height:150px"><canvas id="cLDG_FUNNEL"></canvas></div>
-      </div>
 
       <div class="charts-2">
         <div class="chart-card">
@@ -281,6 +323,35 @@
       <div id="cmp-container"></div>
     </div>
 
+    <!-- ==================== LANDING ORIG TAB ==================== -->
+    <div class="tab-panel" id="panel-landing-orig">
+      <div class="section-label">LANDING ATTR ACIDA <span class="badge" id="ldgo-badge-period">—</span></div>
+      <div class="toggle-row" id="ldgo-toggles"></div>
+      <div class="section-label" style="margin-top:4px">Engagement</div>
+      <div class="kpi-grid" id="ldgo-kpis-eng"></div>
+      <div class="section-label" style="margin-top:4px">Performance</div>
+      <div class="kpi-grid" id="ldgo-kpis-perf"></div>
+      <div class="charts-2">
+        <div class="chart-card">
+          <div class="chart-title">Sesiones diarias</div>
+          <div class="chart-sub" id="ldgo-chart-sub">Por landing</div>
+          <div class="chart-wrap"><canvas id="cLDGO_SESS"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">GMV 168hs (USD)</div>
+          <div class="chart-sub">Evolución de revenue atribuido</div>
+          <div class="chart-wrap"><canvas id="cLDGO_NMV"></canvas></div>
+        </div>
+      </div>
+      <div class="table-card">
+        <div class="table-head">
+          <div class="table-head-title">Métricas por día</div>
+          <div class="tbl-badge" id="ldgo-tbl-badge"></div>
+        </div>
+        <div id="ldgo-tbl-body"></div>
+      </div>
+    </div>
+
     <!-- ==================== OFERTA TAB ==================== -->
     <div class="tab-panel" id="panel-calidad-oferta">
       <div class="section-label">CALIDAD DE OFERTA <span class="badge" id="cal-badge-period">—</span></div>
@@ -332,6 +403,18 @@
       </div>
     </div>
 
+    <!-- ==================== HEATMAP TAB ==================== -->
+    <div class="tab-panel" id="panel-heatmap">
+      <div class="section-label">HEATMAP HOME <span class="badge" style="background:#888;">WIP</span></div>
+      <div style="display:flex;align-items:center;justify-content:center;height:300px;color:#bbb;font-size:14px;font-style:italic;">Próximamente</div>
+    </div>
+
+    <!-- ==================== PP RH TAB ==================== -->
+    <div class="tab-panel" id="panel-pprh">
+      <div class="section-label">PP RH <span class="badge" style="background:#888;">WIP</span></div>
+      <div style="display:flex;align-items:center;justify-content:center;height:300px;color:#bbb;font-size:14px;font-style:italic;">Próximamente</div>
+    </div>
+
   </div><!-- /content -->
 </div><!-- /main -->
 
@@ -342,6 +425,20 @@ var C = { camp_tasa_visita:0, tot_exhib:0, tot_visit:0, tot_gmv_i:0,
           steps:[], financiacion:[], tipo_oferta:[], bench:{},
           containers:[], drill:[], container_groups:{}, refreshed_at:'' };
 var CAL_OPEN_DRILL = null;
+var CAL_CONTAINER_GROUPS = {
+  'MLA1587833':'FOCO','MLA1593960':'FOCO','MLA1587835':'FOCO',
+  'MLA1587824':'FOCO','MLA1587826':'FOCO','MLA1587827':'FOCO',
+  'MLA1587829':'FOCO','MLA1587820':'FOCO','MLA1593102':'FOCO',
+  'MLA1597617':'FOCO','MLA1597616':'FOCO','MLA1585322':'FOCO',
+  'MLA1587823':'FOCO','MLA1587821':'FOCO',
+  'MLA1593114':'NO FOCO','MLA1587855':'NO FOCO','MLA1587853':'NO FOCO',
+  'MLA1587847':'NO FOCO','MLA1587861':'NO FOCO','MLA1587846':'NO FOCO',
+  'MLA1587850':'NO FOCO','MLA1587836':'NO FOCO','MLA1587845':'NO FOCO',
+  'MLA1587843':'NO FOCO','MLA1587852':'NO FOCO','MLA1587839':'NO FOCO',
+  'MLA1593998':'NO FOCO',
+  'MLA1594868':'TÁCTICO','MLA1587867':'TÁCTICO','MLA1594869':'TÁCTICO',
+  'MLA1587863':'TÁCTICO','MLA1587857':'TÁCTICO'
+};
 var CH = {};
 var ACTIVE_TAB = 'summary';
 var LDG_FILTER = 'ALL';
@@ -434,6 +531,7 @@ function renderAll(){
   if(ACTIVE_TAB==='ms')                   renderMS();
   if(ACTIVE_TAB==='landing')              renderLanding();
   if(ACTIVE_TAB==='container')            renderContainer();
+  if(ACTIVE_TAB==='landing-orig')         renderLandingOrig();
   if(ACTIVE_TAB==='calidad-oferta')       renderCalidadOferta();
   if(ACTIVE_TAB==='calidad-containers')   renderCalidadContainers();
 }
@@ -473,216 +571,230 @@ function tgtLine(arr, tgtDates, dataDates){
 function tgtDS(data){ return {label:'Target',data:data,borderColor:'#aaa',borderDash:[6,4],backgroundColor:'transparent',tension:.3,pointRadius:2,borderWidth:1.5,fill:false}; }
 
 // ──────────────────────────────────────────────
-// SUMMARY
+// SUMMARY — ONE PAGER
 // ──────────────────────────────────────────────
 function renderSummary(){
   var el=document.getElementById('sum-content');
   if(!el) return;
 
-  // ── Date range ──
-  var campDates=(D.targets&&D.targets.dates)||[];
-  if(!campDates.length){
-    var dd={};
-    (D.ms||[]).forEach(function(r){dd[r.fecha]=1;});
-    (D.landing||[]).forEach(function(r){dd[r.date||r.DATE]=1;});
-    (D.container||[]).forEach(function(r){dd[r.date||r.DATE]=1;});
-    campDates=Object.keys(dd).sort();
-  }
-  var tgtDates=(D.targets&&D.targets.dates)||[];
-  var tgtMS=(D.targets&&D.targets.ms)||{};
-  var tgtLDG=(D.targets&&D.targets.landing)||{};
-  var tgtCNT=(D.targets&&D.targets.container)||{};
-  var hist=(CMP_IDX!==''&&(D.historical||[]).length)?D.historical[+CMP_IDX]:null;
-  var histName=hist?hist.name:'';
+  var camp=D.campaign||{};
+  var CAMP_DATES=['2026-04-20','2026-04-21','2026-04-22','2026-04-23','2026-04-24','2026-04-25','2026-04-26','2026-04-27','2026-04-28','2026-04-29','2026-04-30','2026-05-01','2026-05-02','2026-05-03','2026-05-04','2026-05-05'];
+  var DAY_LABELS=['20/4','21/4','22/4','23/4','24/4','25/4','26/4','27/4','28/4','29/4','30/4','1/5','2/5','3/5','4/5','5/5'];
+  window.OP_CAMP_START=new Date('2026-04-20T00:00:00');
+  window.OP_CAMP_DATES=CAMP_DATES;
+  window.OP_DAY_LABELS=DAY_LABELS;
 
-  // ── MS PRINCIPAL ──
+  // Build lookup maps from D
   var msByDate={};
-  (D.ms||[]).filter(function(r){
-    if(SUM_MS_FILTER==='PRINCIPAL') return getBucket(r.line_item)==='PRINCIPAL';
-    return getMSSubBucket(r.line_item)===SUM_MS_FILTER;
-  }).forEach(function(r){
-    var d=r.fecha; if(!msByDate[d]) msByDate[d]={clicks:0,prints:0};
-    msByDate[d].clicks+=+r.clicks||0; msByDate[d].prints+=+r.prints||0;
+  (D.ms||[]).forEach(function(r){
+    var d=r.fecha; if(!msByDate[d]) msByDate[d]={ac:0,ap:0,cc:0,cp:0,tc:0,tp:0};
+    var b=msByDate[d], sub=getMSSubBucket(r.line_item);
+    b.ac+=+r.clicks||0; b.ap+=+r.prints||0;
+    if(sub==='celebrity'){b.cc+=+r.clicks||0;b.cp+=+r.prints||0;}
+    if(sub==='tachado'){b.tc+=+r.clicks||0;b.tp+=+r.prints||0;}
   });
-  var histMSByIdx={};
-  if(hist){
-    var hMSmap={}; var hMSdates=[];
-    (hist.ms||[]).filter(function(r){
-      if(SUM_MS_FILTER==='PRINCIPAL') return getBucket(r.line_item)==='PRINCIPAL';
-      return getMSSubBucket(r.line_item)===SUM_MS_FILTER;
-    }).forEach(function(r){
-      var d=r.fecha; if(!hMSmap[d]) hMSmap[d]={clicks:0,prints:0};
-      hMSmap[d].clicks+=+r.clicks||0; hMSmap[d].prints+=+r.prints||0;
-      if(hMSdates.indexOf(d)<0) hMSdates.push(d);
-    });
-    hMSdates.sort().forEach(function(d,i){histMSByIdx[i]=hMSmap[d];});
-  }
-  var msPrints=[],msClicks=[],msCTR=[],hMSPrints=[],hMSClicks=[],hMSCTR=[];
-  var totMSP=0,totMSC=0,totHMSP=0,totHMSC=0;
-  campDates.forEach(function(d,i){
-    var ms=msByDate[d]; var hms=histMSByIdx[i]||null;
-    msPrints.push(ms?ms.prints:null); msClicks.push(ms?ms.clicks:null);
-    msCTR.push(ms&&ms.prints>0?ms.clicks/ms.prints:null);
-    if(ms){totMSP+=ms.prints;totMSC+=ms.clicks;}
-    hMSPrints.push(hms?hms.prints:null); hMSClicks.push(hms?hms.clicks:null);
-    hMSCTR.push(hms&&hms.prints>0?hms.clicks/hms.prints:null);
-    if(hms){totHMSP+=hms.prints;totHMSC+=hms.clicks;}
-  });
-
-  // ── LANDING ──
+  // Usa landing_original si está disponible, sino D.landing como fallback
+  var ldgSrc = (D.landing_original&&D.landing_original.length>0) ? D.landing_original : (D.landing||[]);
   var ldgByDate={};
-  (D.landing||[]).forEach(function(r){
-    var d=r.date||r.DATE; if(!ldgByDate[d]) ldgByDate[d]={sessions:0,users_landing:0,users_container:0};
-    var b=ldgByDate[d]; b.sessions+=+r.sessions||0; b.users_landing+=+r.users_landing||0; b.users_container+=+r.users_container||0;
+  ldgSrc.forEach(function(r){
+    var d=r.date||r.DATE; if(!ldgByDate[d]) ldgByDate[d]={ses:0,ul:0,uc:0};
+    ldgByDate[d].ses+=+r.sessions||0; ldgByDate[d].ul+=+r.users_landing||0; ldgByDate[d].uc+=+r.users_container||0;
   });
   var tsMap={};
   (D.total_site||[]).forEach(function(r){tsMap[r.date||r.DATE]=r;});
-  var histLDGByIdx={};
-  if(hist){
-    var hLDGmap={}; var hLDGdates=[];
-    (hist.landing||[]).forEach(function(r){
-      var d=r.date||r.DATE; if(!hLDGmap[d]) hLDGmap[d]={sessions:0,users_landing:0,users_container:0};
-      var b=hLDGmap[d]; b.sessions+=+r.sessions||0; b.users_landing+=+r.users_landing||0; b.users_container+=+r.users_container||0;
-      if(hLDGdates.indexOf(d)<0) hLDGdates.push(d);
-    });
-    hLDGdates.sort().forEach(function(d,i){histLDGByIdx[i]=hLDGmap[d];});
-  }
-  var ldgSess=[],ldgShare=[],ldgCTR=[],hLDGSess=[],hLDGCTR=[];
-  var totLSess=0,totLUL=0,totLUC=0,totTSSess=0,totHLSess=0,totHLUL=0,totHLUC=0;
-  campDates.forEach(function(d,i){
-    var l=ldgByDate[d]; var hldg=histLDGByIdx[i]||null; var ts=tsMap[d];
-    ldgSess.push(l?l.sessions:null);
-    ldgShare.push(l&&ts&&+ts.ts_sessions>0?l.sessions/+ts.ts_sessions:null);
-    ldgCTR.push(l&&l.users_landing>0?l.users_container/l.users_landing:null);
-    if(l){totLSess+=l.sessions;totLUL+=l.users_landing;totLUC+=l.users_container;}
-    if(ts) totTSSess+=+ts.ts_sessions||0;
-    hLDGSess.push(hldg?hldg.sessions:null);
-    hLDGCTR.push(hldg&&hldg.users_landing>0?hldg.users_container/hldg.users_landing:null);
-    if(hldg){totHLSess+=hldg.sessions;totHLUL+=hldg.users_landing;totHLUC+=hldg.users_container;}
-  });
-
-  // ── CONTAINER ──
   var cntByDate={};
   (D.container||[]).forEach(function(r){
-    var d=r.date||r.DATE; if(!cntByDate[d]) cntByDate[d]={sessions:0,nmv:0,nsi:0,orders:0};
-    var b=cntByDate[d]; b.sessions+=+r.sessions||0; b.nmv+=+r.nmv||0; b.nsi+=+r.nsi||0; b.orders+=+r.orders||0;
+    var d=r.date||r.DATE; if(!cntByDate[d]) cntByDate[d]={ses:0,nmv:0,ord:0,nsi:0};
+    cntByDate[d].ses+=+r.sessions||0; cntByDate[d].nmv+=+r.nmv||0; cntByDate[d].ord+=+r.orders||0; cntByDate[d].nsi+=+r.nsi||0;
   });
-  var tcMap={};
-  (D.total_containers||[]).forEach(function(r){tcMap[r.date||r.DATE]=r;});
-  var histCNTByIdx={};
-  if(hist){
-    var hCNTmap={}; var hCNTdates=[];
-    (hist.container||[]).forEach(function(r){
-      var d=r.date||r.DATE; if(!hCNTmap[d]) hCNTmap[d]={sessions:0,nmv:0,nsi:0,orders:0};
-      var b=hCNTmap[d]; b.sessions+=+r.sessions||0; b.nmv+=+r.nmv||0; b.nsi+=+r.nsi||0; b.orders+=+r.orders||0;
-      if(hCNTdates.indexOf(d)<0) hCNTdates.push(d);
-    });
-    hCNTdates.sort().forEach(function(d,i){histCNTByIdx[i]=hCNTmap[d];});
-  }
-  var cSess=[],cShare=[],cNMV=[],cShareNMV=[],cNSI=[],cNASP=[],cCVR=[];
-  var hCSess=[],hCNMV=[],hCNSI=[],hCNASP=[],hCCVR=[];
-  var totCS=0,totCN=0,totCNSI=0,totCO=0,totTCS=0,totTCN=0;
-  var totHCS=0,totHCN=0,totHCNSI=0,totHCO=0;
-  campDates.forEach(function(d,i){
-    var c=cntByDate[d]; var hcnt=histCNTByIdx[i]||null; var tc=tcMap[d];
-    cSess.push(c?c.sessions:null); cNMV.push(c?c.nmv:null); cNSI.push(c?c.nsi:null);
-    cNASP.push(c&&c.orders>0?c.nmv/c.orders:null);
-    cCVR.push(c&&c.sessions>0?c.orders/c.sessions:null);
-    cShare.push(c&&tc&&+tc.total_sessions>0?c.sessions/+tc.total_sessions:null);
-    cShareNMV.push(c&&tc&&+tc.total_nmv>0?c.nmv/+tc.total_nmv:null);
-    if(c){totCS+=c.sessions;totCN+=c.nmv;totCNSI+=c.nsi;totCO+=c.orders;}
-    if(tc){totTCS+=+tc.total_sessions||0;totTCN+=+tc.total_nmv||0;}
-    hCSess.push(hcnt?hcnt.sessions:null); hCNMV.push(hcnt?hcnt.nmv:null); hCNSI.push(hcnt?hcnt.nsi:null);
-    hCNASP.push(hcnt&&hcnt.orders>0?hcnt.nmv/hcnt.orders:null);
-    hCCVR.push(hcnt&&hcnt.sessions>0?hcnt.orders/hcnt.sessions:null);
-    if(hcnt){totHCS+=hcnt.sessions;totHCN+=hcnt.nmv;totHCNSI+=hcnt.nsi;totHCO+=hcnt.orders;}
+  var tgt=D.targets||{}, tgtDates=tgt.dates||[], tgtMS=tgt.ms||{}, tgtLDG=tgt.landing||{}, tgtCNT=tgt.container||{};
+
+  function tgtArr(arr){return CAMP_DATES.map(function(d){var i=tgtDates.indexOf(d);return arr&&i>=0?arr[i]:null;});}
+  function dayV(fn){return CAMP_DATES.map(fn);}
+
+  // Build OP data arrays
+  var OP={
+    ms_ctr:       dayV(function(d){var b=msByDate[d];return b&&b.ap>0?b.ac/b.ap:null;}),
+    ms_ctr_tgt:   tgtArr(tgtMS.ctr),
+    celebrity_ctr:dayV(function(d){var b=msByDate[d];return b&&b.cp>0?b.cc/b.cp:null;}),
+    tachados_ctr: dayV(function(d){var b=msByDate[d];return b&&b.tp>0?b.tc/b.tp:null;}),
+    landing_ses:     dayV(function(d){var b=ldgByDate[d];return b?b.ses:null;}),
+    landing_ses_tgt: tgtArr(tgtLDG.sessions),
+    landing_share:     dayV(function(d){var b=ldgByDate[d],ts=tsMap[d];return b&&ts&&+ts.ts_sessions>0?b.ses/+ts.ts_sessions:null;}),
+    landing_share_tgt: tgtArr(tgtLDG.share_sessions),
+    landing_ctr:     dayV(function(d){var b=ldgByDate[d];return b&&b.ul>0?b.uc/b.ul:null;}),
+    landing_ctr_tgt: tgtArr(tgtLDG.ctr),
+    cont_ses:     dayV(function(d){var b=cntByDate[d];return b?b.ses:null;}),
+    cont_ses_tgt: tgtArr(tgtCNT.sessions),
+    cont_nmv:     dayV(function(d){var b=cntByDate[d];return b?b.nmv:null;}),
+    cont_nmv_tgt: tgtArr(tgtCNT.nmv),
+    cont_nmvpct:     dayV(function(d){var b=cntByDate[d],ts=tsMap[d];return b&&ts&&+ts.tgmv_usd>0?b.nmv/+ts.tgmv_usd:null;}),
+    cont_nmvpct_tgt: tgtArr(tgtCNT.share_nmv),
+    cont_asp:     dayV(function(d){var b=cntByDate[d];return b&&b.ord>0?b.nmv/b.ord:null;}),
+    cont_nsi:     dayV(function(d){var b=cntByDate[d];return b?b.nsi:null;}),
+    cont_nsi_tgt: tgtArr(tgtCNT.nsi),
+    cont_cvr:     dayV(function(d){var b=cntByDate[d];return b&&b.ses>0?b.ord/b.ses:null;}),
+    cont_cvr_tgt: tgtArr(tgtCNT.cvr)
+  };
+
+  // Calidad from C
+  var calAgg={};
+  (C.oferta||[]).forEach(function(r){Object.keys(r).forEach(function(k){if(k!=='PATTERN'&&k!=='DISCOUNT_POND')calAgg[k]=(calAgg[k]||0)+(+r[k]||0);else if(k==='DISCOUNT_POND')calAgg[k]=r[k];});});
+  var calTotV=calAgg.VIEWED_ITEMS||0, calTotE=calAgg.ITEMS_EXHIBIDOS||0, calTotG=calAgg.GMV_ITEMS||0;
+  OP.calidad_riu_high=calTotV>0?(calAgg.HIGH_ITEMS_V||0)/calTotV*100:null;
+  OP.calidad_con_oferta=calTotV>0?(calTotV-(calAgg.NO_OFFER_ITEMS||0))/calTotV*100:null;
+  OP.calidad_dto_pond=calAgg.DISCOUNT_POND!=null?Math.abs(calAgg.DISCOUNT_POND)*100:null;
+  OP.calidad_funnel_steps=[{paso:'Exhibidos',items:calTotE},{paso:'Visitados',items:calTotV},{paso:'Vendidos',items:calTotG}];
+  var noE=calTotE-(calAgg.REAL_OFFER_E||0), noV=calAgg.NO_OFFER_ITEMS||0, noG=calAgg.NO_OFFER_GMV_ITEMS||0;
+  OP.calidad_funnel_fin=[
+    {categoria:'Cofinanciado ML',exhibidos:calAgg.OFFER_COFINANCED_E||0,visitados:calAgg.OFFER_COFINANCED_V||0,vendidos:calAgg.OFFER_COFINANCED_GMV||0},
+    {categoria:'100% Seller',exhibidos:calAgg.OFFER_SELLER_E||0,visitados:calAgg.OFFER_SELLER_V||0,vendidos:calAgg.OFFER_SELLER_GMV||0},
+    {categoria:'Sin Oferta',exhibidos:noE,visitados:noV,vendidos:noG}
+  ].map(function(r){r.pct_visita=r.exhibidos>0?r.visitados/r.exhibidos*100:0;r.pct_conv=r.visitados>0?r.vendidos/r.visitados*100:0;return r;});
+  OP.calidad_funnel_oferta=[
+    {categoria:'Pre-negociada',E:'OFFER_PRENEGOTIATED_E',V:'OFFER_PRENEGOTIATED_V',G:'OFFER_PRENEGOTIATED_GMV'},
+    {categoria:'Tiers',E:'OFFER_TIERS_E',V:'OFFER_TIERS_V',G:'OFFER_TIERS_GMV'},
+    {categoria:'Smart',E:'OFFER_SMART_E',V:'OFFER_SMART_V',G:'OFFER_SMART_GMV'},
+    {categoria:'Custom',E:'OFFER_CUSTOM_E',V:'OFFER_CUSTOM_V',G:'OFFER_CUSTOM_GMV'},
+    {categoria:'DOD',E:'OFFER_DOD_E',V:'OFFER_DOD_V',G:'OFFER_DOD_GMV'},
+    {categoria:'Lightning',E:'OFFER_LIGHTNING_E',V:'OFFER_LIGHTNING_V',G:'OFFER_LIGHTNING_GMV'},
+    {categoria:'Otros',E:'OFFER_OTHERS_E',V:'OFFER_OTHERS_V',G:'OFFER_OTHERS_GMV'}
+  ].map(function(t){var e=calAgg[t.E]||0,v=calAgg[t.V]||0,g=calAgg[t.G]||0;return {categoria:t.categoria,exhibidos:e,visitados:v,vendidos:g,pct_visita:e>0?v/e*100:0,pct_conv:v>0?g/v*100:0};}).filter(function(r){return r.exhibidos>0||r.visitados>0;});
+  function shortCN(name){return (name||'').replace(/MKP\s+DEMAND\s+\d+\s+\d+\s+\w+\s+\d+\s*/i,'').trim()||name;}
+  OP.calidad_funnel_containers=(C.containers||[]).map(function(r){var e=+r.ITEMS_EXHIBIDOS||0,no=+r.NO_OFFER_ITEMS||0;return {container:shortCN(r.CONTAINER_NAME),exhibidos:e,sin_oferta:no,pct_sin_oferta:e>0?no/e*100:0};}).sort(function(a,b){return b.sin_oferta-a.sin_oferta;});
+  var totNMV=(C.containers||[]).reduce(function(s,r){return s+(+r.GMV_LC_168HS_TOTAL||0);},0);
+  OP.top_cont_nmv=(C.containers||[]).slice().sort(function(a,b){return (+b.GMV_LC_168HS_TOTAL||0)-(+a.GMV_LC_168HS_TOTAL||0);}).slice(0,5).map(function(r){var nmv=+r.GMV_LC_168HS_TOTAL||0,ses=+r.UNIQUE_SESSION||0,trx=+r.TRANSACTIONS_24HS||0;return {container:shortCN(r.CONTAINER_NAME),nmv:nmv,sessions:ses,orders:trx,nmv_share:totNMV>0?nmv/totNMV*100:0,cvr:ses>0?trx/ses*100:0};});
+  OP.top_cont_cvr=(C.containers||[]).filter(function(r){return (+r.UNIQUE_SESSION||0)>50;}).slice().sort(function(a,b){return (+b.TRANSACTIONS_24HS||0)/(+b.UNIQUE_SESSION||1)-(+a.TRANSACTIONS_24HS||0)/(+a.UNIQUE_SESSION||1);}).slice(0,5).map(function(r){var nmv=+r.GMV_LC_168HS_TOTAL||0,ses=+r.UNIQUE_SESSION||0,trx=+r.TRANSACTIONS_24HS||0;return {container:shortCN(r.CONTAINER_NAME),nmv:nmv,sessions:ses,orders:trx,nmv_share:totNMV>0?nmv/totNMV*100:0,cvr:ses>0?trx/ses*100:0};});
+  window.OP_DATA=OP;
+
+  // Image URLs — push images to docs/ folder in GitHub repo
+  var RAW='https://raw.githubusercontent.com/josefinaquirno/campaign_tracker/main/docs/';
+  var IMG_CEL=RAW+'MS_GENERAL_CELEBRITY_MKP_DEMAND_5_5_ABRIL_2026%20.jpg';
+  var IMG_TAC=RAW+'MS_GENERAL_TACHADOS_MKP_DEMAND_5_5_ABRIL_2026.jpg';
+
+  var cs=camp.start||'2026-04-20', ce=camp.end||'2026-05-05';
+
+  // Quick-period toggle helpers
+  var today=new Date(), todayStr=today.toISOString().slice(0,10);
+  var clampDate=function(s){return s<cs?cs:s>ce?ce:s;};
+  var daysBefore=function(n){var d=new Date(today);d.setDate(d.getDate()-n);return clampDate(d.toISOString().slice(0,10));};
+
+  el.innerHTML='<div class="op-slide">'
+    +'<div class="op-hdr">'
+    // Day pills
+    +'<div style="display:flex;gap:4px;flex-wrap:wrap;">'
+    +'<button class="op-fbtn active" onclick="opSetPeriod(\'acum\')" id="op-pill-acum">Acum.</button>'
+    +DAY_LABELS.map(function(lbl,i){return '<button class="op-fbtn" onclick="opSetPeriod(\''+CAMP_DATES[i]+'\')" id="op-pill-'+CAMP_DATES[i]+'">'+lbl+'</button>';}).join('')
+    +'</div>'
+    +'<input type="date" id="op-from" value="'+cs+'" style="display:none">'
+    +'<input type="date" id="op-to"   value="'+ce+'" style="display:none">'
+    +'<span id="op-period-lbl" style="font-size:10px;color:#ffe600;font-weight:600;margin-left:8px;"></span>'
+    +'</div>'
+    +'<div class="op-body">'
+    // LEFT
+    +'<div class="op-left">'
+    +'<div class="op-sec-lbl"><span class="op-dot op-dot-ms"></span>Main Slider</div>'
+    +'<div class="op-mwrap"><table class="op-mt"><thead><tr><th></th><th>TOTAL</th><th>VAR vs TGT</th></tr></thead><tbody>'
+    +'<tr><td>CTR Total</td><td class="op-val" id="op-ms-ctr-v">—</td><td><span class="op-badge op-neut" id="op-ms-ctr-d">—</span></td></tr>'
+    +'</tbody></table></div>'
+    +'<div class="op-sec-lbl" style="margin-top:6px;"><span class="op-dot op-dot-ms"></span>Landing</div>'
+    +'<div class="op-mwrap"><table class="op-mt"><thead><tr><th></th><th>TOTAL</th><th>VAR vs TGT</th></tr></thead><tbody>'
+    +'<tr><td>Sesiones</td><td class="op-val" id="op-ldg-ses-v">—</td><td><span class="op-badge op-neut" id="op-ldg-ses-d">—</span></td></tr>'
+    +'<tr><td>Share Sesiones</td><td class="op-val" id="op-ldg-sh-v">—</td><td><span class="op-badge op-neut" id="op-ldg-sh-d">—</span></td></tr>'
+    +'<tr><td>CTR Landing</td><td class="op-val" id="op-ldg-ctr-v">—</td><td><span class="op-badge op-neut" id="op-ldg-ctr-d">—</span></td></tr>'
+    +'</tbody></table></div>'
+    +'<div class="op-sec-lbl" style="margin-top:6px;"><span class="op-dot op-dot-cnt"></span>Containers</div>'
+    +'<div class="op-mwrap"><table class="op-mt"><thead><tr><th></th><th>TOTAL</th><th>VAR vs TGT</th></tr></thead><tbody>'
+    +'<tr><td>Sesiones</td><td class="op-val" id="op-cnt-ses-v">—</td><td><span class="op-badge op-neut" id="op-cnt-ses-d">—</span></td></tr>'
+    +'<tr><td>NMV Attr (USD)</td><td class="op-val" id="op-cnt-nmv-v">—</td><td><span class="op-badge op-neut" id="op-cnt-nmv-d">—</span></td></tr>'
+    +'<tr><td>NMV Attr (%)</td><td class="op-val" id="op-cnt-nmvp-v">—</td><td><span class="op-badge op-neut" id="op-cnt-nmvp-d">—</span></td></tr>'
+    +'<tr><td>NASP (USD)</td><td class="op-val" id="op-cnt-asp-v">—</td><td><span class="op-badge op-neut" id="op-cnt-asp-d">—</span></td></tr>'
+    +'<tr><td>NSI</td><td class="op-val" id="op-cnt-nsi-v">—</td><td><span class="op-badge op-neut" id="op-cnt-nsi-d">—</span></td></tr>'
+    +'<tr><td>CVR</td><td class="op-val" id="op-cnt-cvr-v">—</td><td><span class="op-badge op-neut" id="op-cnt-cvr-d">—</span></td></tr>'
+    +'</tbody></table></div>'
+    +'<div class="op-sec-lbl" style="margin-top:6px;"><span class="op-dot op-dot-cal"></span>Calidad de Oferta</div>'
+    +'<div class="op-mwrap"><table class="op-mt"><thead><tr><th></th><th>TOTAL (V)</th><th>vs Anterior</th></tr></thead><tbody>'
+    +'<tr><td>% RIU High</td><td class="op-val" id="op-cal-riu-v">—</td><td><span class="op-badge op-neut" id="op-cal-riu-d">—</span></td></tr>'
+    +'<tr><td>% con Oferta</td><td class="op-val" id="op-cal-of-v">—</td><td><span class="op-badge op-neut" id="op-cal-of-d">—</span></td></tr>'
+    +'<tr><td>DTO Ponderado</td><td class="op-val" id="op-cal-dto-v">—</td><td><span class="op-badge op-neut" id="op-cal-dto-d">—</span></td></tr>'
+    +'</tbody></table></div>'
+    +'</div>'
+    // RIGHT
+    +'<div class="op-right">'
+    +'<div class="op-row-ms"><div class="op-creative-row">'
+    +'<div class="op-cblock"><img class="op-creative-img" src="'+IMG_CEL+'" alt="Celebrity" onerror="this.style.display=\'none\'">'
+    +'<div class="op-cinfo"><span class="op-clbl">Celebrity</span><span class="op-ctr-lbl">CTR</span>'
+    +'<div style="display:flex;align-items:baseline;gap:7px;"><span class="op-ctr-val" id="op-cel-ctr-v">—</span><span class="op-badge op-neut" id="op-cel-ctr-d">—</span></div></div></div>'
+    +'<div class="op-cblock"><img class="op-creative-img" src="'+IMG_TAC+'" alt="Tachados" onerror="this.style.display=\'none\'">'
+    +'<div class="op-cinfo"><span class="op-clbl">Tachados</span><span class="op-ctr-lbl">CTR</span>'
+    +'<div style="display:flex;align-items:baseline;gap:7px;"><span class="op-ctr-val" id="op-tac-ctr-v">—</span><span class="op-badge op-neut" id="op-tac-ctr-d">—</span></div></div></div>'
+    +'</div></div>'
+    +'<div class="op-row-landing"><div class="op-chart-wrap">'
+    +'<div class="op-chart-top"><div class="op-sec-lbl" style="padding:5px 0 2px;"><span class="op-dot op-dot-ms"></span>Sesiones Landing · Diario vs Target</div>'
+    +'<div style="display:flex;gap:10px;font-size:10px;color:#aaa;">'
+    +'<span style="display:flex;align-items:center;gap:3px;"><span style="width:10px;height:8px;background:#ffe600;border-radius:2px;display:inline-block;"></span>Sesiones</span>'
+    +'<span style="display:flex;align-items:center;gap:3px;"><span style="width:10px;height:8px;background:rgba(90,90,130,.35);border-radius:2px;display:inline-block;"></span>Target</span>'
+    +'<span style="display:flex;align-items:center;gap:3px;"><span style="width:14px;height:2px;background:#1a1a3e;display:inline-block;"></span>Share %</span></div></div>'
+    +'<div style="flex:1;position:relative;min-height:0;"><canvas id="op-ldg-chart"></canvas></div>'
+    +'</div></div>'
+    +'<div class="op-row-containers"><div class="op-chart-wrap">'
+    +'<div class="op-chart-top"><div class="op-sec-lbl" style="padding:5px 0 2px;"><span class="op-dot op-dot-cnt"></span>Containers</div>'
+    +'<div style="display:flex;align-items:center;gap:8px;">'
+    +'<div id="op-cnt-legend" style="display:flex;gap:10px;font-size:10px;color:#aaa;">'
+    +'<span style="display:flex;align-items:center;gap:3px;"><span style="width:10px;height:8px;background:#e6a800;border-radius:2px;display:inline-block;"></span>NMV</span>'
+    +'<span style="display:flex;align-items:center;gap:3px;"><span style="width:10px;height:8px;background:rgba(90,90,130,.35);border-radius:2px;display:inline-block;"></span>Target</span>'
+    +'<span style="display:flex;align-items:center;gap:3px;"><span style="width:14px;border-top:2px dashed #9c6ef0;display:inline-block;"></span>CVR</span></div>'
+    +'<div style="display:flex;gap:5px;"><button class="op-fbtn active" id="op-btn-ch" onclick="opContView(\'chart\')">Gráfico</button>'
+    +'<button class="op-fbtn" id="op-btn-top" onclick="opContView(\'top\')">Top Containers</button></div>'
+    +'</div></div>'
+    +'<div style="flex:1;position:relative;min-height:0;" id="op-cnt-ch-view"><canvas id="op-cnt-chart"></canvas></div>'
+    +'<div id="op-cnt-top-view" style="display:none;flex:1;overflow:hidden;padding-top:4px;">'
+    +'<div style="display:flex;gap:12px;height:100%;">'
+    +'<div style="flex:1;overflow:auto;"><div style="font-size:9px;font-weight:800;color:#3483fa;text-transform:uppercase;letter-spacing:.8px;padding:2px 5px 6px;">Top 5 — Share NMV</div><table class="op-ftable"><thead><tr><th>Container</th><th>NMV</th><th>Share</th><th>CVR</th></tr></thead><tbody id="op-tbody-nmv"></tbody></table></div>'
+    +'<div style="flex:1;overflow:auto;"><div style="font-size:9px;font-weight:800;color:#9c6ef0;text-transform:uppercase;letter-spacing:.8px;padding:2px 5px 6px;">Top 5 — CVR</div><table class="op-ftable"><thead><tr><th>Container</th><th>Ses.</th><th>CVR</th><th>Share NMV</th></tr></thead><tbody id="op-tbody-cvr"></tbody></table></div>'
+    +'</div></div>'
+    +'</div></div>'
+    +'<div class="op-row-calidad"><div style="display:flex;flex-direction:column;height:100%;">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 14px 2px;">'
+    +'<div class="op-sec-lbl" style="padding:0;"><span class="op-dot op-dot-cal"></span>Calidad de Oferta · Funnel</div>'
+    +'<div style="display:flex;gap:5px;">'
+    +'<button class="op-fbtn active" data-opv="total" onclick="opFunnel(\'total\')">Total</button>'
+    +'<button class="op-fbtn" data-opv="fin" onclick="opFunnel(\'fin\')">Financiación</button>'
+    +'<button class="op-fbtn" data-opv="oferta" onclick="opFunnel(\'oferta\')">Tipo de Oferta</button>'
+    +'<button class="op-fbtn" data-opv="container" onclick="opFunnel(\'container\')">Containers</button>'
+    +'</div></div>'
+    +'<div style="padding:0 14px 8px;flex:1;overflow:auto;">'
+    +'<table class="op-ftable"><thead id="op-f-thead"><tr></tr></thead><tbody id="op-f-tbody"></tbody></table>'
+    +'</div></div></div>'
+    +'</div></div>';
+
+  // Init charts
+  if(CH['op-ldg']) CH['op-ldg'].destroy();
+  CH['op-ldg']=new Chart(document.getElementById('op-ldg-chart').getContext('2d'),{
+    data:{labels:DAY_LABELS,datasets:[
+      {type:'bar',label:'Sesiones',data:OP.landing_ses,backgroundColor:'#ffe600',borderRadius:3,yAxisID:'y',order:2},
+      {type:'bar',label:'Target',data:OP.landing_ses_tgt,backgroundColor:'rgba(90,90,130,0.28)',borderRadius:3,yAxisID:'y',order:3},
+      {type:'line',label:'Share %',data:OP.landing_share,borderColor:'#1a1a3e',backgroundColor:'rgba(26,26,62,0.07)',fill:true,pointRadius:2,borderWidth:2,tension:0.4,yAxisID:'y1',order:1}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{backgroundColor:'#1a1a3e',titleColor:'#ffe600',bodyColor:'#fff',titleFont:{size:10},bodyFont:{size:10},padding:6,cornerRadius:4}},
+      scales:{x:{grid:{display:false},ticks:{color:'#bbb',font:{size:8},maxRotation:0}},y:{display:false},y1:{display:false}}}
   });
 
-  // ── RENDER HELPERS ──
-  function pctD(a,r){if(a==null||r==null||r===0)return null;return(a-r)/r*100;}
-  function dSpan(pct){
-    if(pct==null)return '—';
-    var cls=pct>=0?'sum-pos':pct>=-10?'sum-warn-neg':'sum-neg';
-    return '<span class="'+cls+'">'+(pct>=0?'+':'')+pct.toFixed(2)+'%</span>';
-  }
-  function tgtDayArr(src){
-    if(!src||!src.length)return null;
-    var a=campDates.map(function(d){var i=tgtDates.indexOf(d);return i>=0?src[i]:null;});
-    return a.some(function(v){return v!=null;})?a:null;
-  }
+  if(CH['op-cnt']) CH['op-cnt'].destroy();
+  CH['op-cnt']=new Chart(document.getElementById('op-cnt-chart').getContext('2d'),{
+    data:{labels:DAY_LABELS,datasets:[
+      {type:'bar',label:'NMV Attr',data:OP.cont_nmv,backgroundColor:'#e6a800',borderRadius:3,yAxisID:'y',order:2},
+      {type:'bar',label:'Target NMV',data:OP.cont_nmv_tgt,backgroundColor:'rgba(90,90,130,0.28)',borderRadius:3,yAxisID:'y',order:3},
+      {type:'line',label:'CVR',data:OP.cont_cvr,borderColor:'#9c6ef0',backgroundColor:'transparent',fill:false,pointRadius:2,borderWidth:2,borderDash:[5,3],tension:0.4,yAxisID:'y1',order:1}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{backgroundColor:'#1a1a3e',titleColor:'#ffe600',bodyColor:'#fff',titleFont:{size:10},bodyFont:{size:10},padding:6,cornerRadius:4}},
+      scales:{x:{grid:{display:false},ticks:{color:'#bbb',font:{size:8},maxRotation:0}},y:{display:false},y1:{display:false}}}
+  });
 
-  // buildTable: metrics as rows, days as columns
-  function buildTable(title, metrics, headerWidget){
-    var N=campDates.length;
-    var h='<div class="sum-section">'+(headerWidget?'<div style="padding:12px 16px 0">'+headerWidget+'</div>':'')+'<div class="sum-tbl-wrap"><table>';
-    // Header
-    h+='<thead><tr><th class="sum-hdr-metric">'+title+'</th>';
-    campDates.forEach(function(d,i){h+='<th>D'+(i+1)+'<br><span style="font-weight:400;font-size:9px;text-transform:none">'+fDate(d)+'</span></th>';});
-    h+='<th class="sum-hdr-total">TOTAL</th></tr></thead><tbody>';
-
-    metrics.forEach(function(m){
-      // Actual row
-      h+='<tr class="sum-metric-row"><td class="sum-label">'+m.label+'</td>';
-      m.vals.forEach(function(v){h+='<td>'+(v!=null?m.fmt(v):'<span class="sum-missing">—</span>')+'</td>';});
-      h+='<td class="sum-total">'+(m.total!=null?m.fmt(m.total):'—')+'</td></tr>';
-
-      // Target sub-rows
-      var ta=m.tgt?tgtDayArr(m.tgt):null;
-      if(ta){
-        h+='<tr class="sum-tgt-row"><td class="sum-sub-label">Target</td>';
-        ta.forEach(function(tv){h+='<td>'+(tv!=null?m.fmt(tv):'—')+'</td>';});
-        h+='<td class="sum-total">—</td></tr>';
-        h+='<tr class="sum-vs-tgt-row"><td class="sum-sub-label">vs Target</td>';
-        ta.forEach(function(tv,i){h+='<td>'+dSpan(pctD(m.vals[i],tv))+'</td>';});
-        h+='<td class="sum-total">—</td></tr>';
-      }
-
-      // Historical sub-rows
-      if(hist&&m.hvals){
-        h+='<tr class="sum-hist-row"><td class="sum-sub-label">'+histName+'</td>';
-        m.hvals.forEach(function(hv){h+='<td>'+(hv!=null?m.fmt(hv):'—')+'</td>';});
-        h+='<td class="sum-total">'+(m.htotal!=null?m.fmt(m.htotal):'—')+'</td></tr>';
-        h+='<tr class="sum-vs-hist-row"><td class="sum-sub-label">vs '+histName+'</td>';
-        m.hvals.forEach(function(hv,i){h+='<td>'+dSpan(pctD(m.vals[i],hv))+'</td>';});
-        h+='<td class="sum-total">'+dSpan(pctD(m.total,m.htotal))+'</td></tr>';
-      }
-    });
-
-    h+='</tbody></table></div></div>';
-    return h;
-  }
-
-  var p2=function(v){return fPct(v,2);};
-  var msLabel={'PRINCIPAL':'PRINCIPAL (total)','celebrity':'Celebrity','tachado':'Tachado'};
-  var msDropdown='<div style="display:flex;align-items:center;gap:8px"><label style="font-size:11px;color:#888;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Ver:</label>'
-    +'<select onchange="setSumMSFilter(this.value)" style="border:1px solid #ddd;border-radius:6px;padding:4px 10px;font-size:11px;color:#333;cursor:pointer">'
-    +'<option value="PRINCIPAL"'+(SUM_MS_FILTER==='PRINCIPAL'?' selected':'')+'>PRINCIPAL (total)</option>'
-    +'<option value="celebrity"'+(SUM_MS_FILTER==='celebrity'?' selected':'')+'>Celebrity</option>'
-    +'<option value="tachado"'+(SUM_MS_FILTER==='tachado'?' selected':'')+'>Tachado</option>'
-    +'</select></div>';
-  var html=buildTable('MAIN SLIDER — '+(msLabel[SUM_MS_FILTER]||SUM_MS_FILTER),[
-    {label:'Prints',  vals:msPrints, total:totMSP||null,  fmt:fNum, tgt:null,      hvals:hist?hMSPrints:null, htotal:totHMSP||null},
-    {label:'Clicks',  vals:msClicks, total:totMSC||null,  fmt:fNum, tgt:null,      hvals:hist?hMSClicks:null, htotal:totHMSC||null},
-    {label:'CTR',     vals:msCTR,    total:totMSP>0?totMSC/totMSP:null, fmt:p2,   tgt:tgtMS.ctr, hvals:hist?hMSCTR:null, htotal:totHMSP>0?totHMSC/totHMSP:null}
-  ], msDropdown);
-
-  html+=buildTable('LANDING',[
-    {label:'Sesiones',       vals:ldgSess,  total:totLSess,               fmt:fNum, tgt:tgtLDG.sessions,       hvals:hist?hLDGSess:null, htotal:totHLSess||null},
-    {label:'Share Sesiones', vals:ldgShare, total:totTSSess>0?totLSess/totTSSess:null, fmt:p2, tgt:tgtLDG.share_sessions, hvals:null, htotal:null},
-    {label:'CTR',            vals:ldgCTR,   total:totLUL>0?totLUC/totLUL:null, fmt:p2, tgt:tgtLDG.ctr, hvals:hist?hLDGCTR:null, htotal:totHLUL>0?totHLUC/totHLUL:null}
-  ]);
-
-  html+=buildTable('CONTAINERS',[
-    {label:'Sesiones',       vals:cSess,    total:totCS||null,            fmt:fNum, tgt:tgtCNT.sessions,       hvals:hist?hCSess:null, htotal:totHCS||null},
-    {label:'Share Sesiones', vals:cShare,   total:totTCS>0?totCS/totTCS:null, fmt:p2, tgt:tgtCNT.share_sessions, hvals:null, htotal:null},
-    {label:'NMV',            vals:cNMV,     total:totCN||null,            fmt:fNMV, tgt:tgtCNT.nmv,            hvals:hist?hCNMV:null, htotal:totHCN||null},
-    {label:'Share NMV',      vals:cShareNMV,total:totTCN>0?totCN/totTCN:null, fmt:p2, tgt:tgtCNT.share_nmv,   hvals:null, htotal:null},
-    {label:'NSI',            vals:cNSI,     total:totCNSI||null,          fmt:fNum, tgt:tgtCNT.nsi,            hvals:hist?hCNSI:null, htotal:totHCNSI||null},
-    {label:'NASP',           vals:cNASP,    total:totCO>0?totCN/totCO:null, fmt:fNMV, tgt:tgtCNT.nasp,         hvals:hist?hCNASP:null, htotal:totHCO>0?totHCN/totHCO:null},
-    {label:'CVR',            vals:cCVR,     total:totCS>0?totCO/totCS:null, fmt:p2, tgt:tgtCNT.cvr,            hvals:hist?hCCVR:null, htotal:totHCS>0?totHCO/totHCS:null}
-  ]);
-
-  el.innerHTML=html;
+  opSetPeriod('acum');
+  opFunnel('total');
 }
 
 // ──────────────────────────────────────────────
@@ -1000,35 +1112,6 @@ function renderLanding(){
 
   renderKpiGroup(engCfg,  'ldg-kpis-eng');
   renderKpiGroup(perfCfg, 'ldg-kpis-perf');
-
-  // Funnel chart — solo si hay datos de usuarios (query con CTR)
-  if(CH['cLDG_FUNNEL']) CH['cLDG_FUNNEL'].destroy();
-  var fLabels=['Sesiones','Transacciones','Buyers'];
-  var fVals=[tot.sessions, tot.transactions, tot.buyers];
-  var fColors=['rgba(255,230,0,0.85)','rgba(255,152,0,0.85)','rgba(76,175,80,0.85)'];
-  CH['cLDG_FUNNEL']=new Chart(document.getElementById('cLDG_FUNNEL').getContext('2d'),{
-    type:'bar',
-    data:{
-      labels:fLabels,
-      datasets:[{data:fVals,backgroundColor:fColors,borderRadius:4,borderSkipped:false}]
-    },
-    options:{
-      indexAxis:'y', responsive:true, maintainAspectRatio:false,
-      plugins:{
-        legend:{display:false},
-        tooltip:{callbacks:{label:function(ctx){
-          var v=ctx.raw, i=ctx.dataIndex;
-          var prev=i>0?fVals[i-1]:null;
-          var pct=prev>0?' ('+( v/prev*100).toFixed(1)+'% del paso anterior)':'';
-          return fNum(v)+pct;
-        }}}
-      },
-      scales:{
-        x:{display:false},
-        y:{grid:{display:false},ticks:{font:{size:11},color:'#555'}}
-      }
-    }
-  });
 
   // Charts
   var lbls=dates.map(fDate);
@@ -1541,26 +1624,18 @@ function renderCalidadOferta(){
   var badge=document.getElementById('cal-badge-period');
   if(badge) badge.textContent='Act: '+(C.refreshed_at||'—').substring(0,10);
 
-  // Agregar exhibidos_pattern y visitados_pattern (suma todos los PATTERN)
-  var EP={}, VP={};
-  (C.exhibidos_pattern||[]).forEach(function(r){
+  // Agregar oferta (suma todos los PATTERN — cada row ya tiene E+V+G unidos)
+  var agg={};
+  (C.oferta||[]).forEach(function(r){
     Object.keys(r).forEach(function(k){
-      if(k!=='PATTERN'&&k!=='PRICE_POND') EP[k]=(EP[k]||0)+(+r[k]||0);
+      if(k!=='PATTERN'&&k!=='DISCOUNT_POND') agg[k]=(agg[k]||0)+(+r[k]||0);
+      else if(k==='DISCOUNT_POND') agg[k]=r[k]; // tomar último (o promedio simple)
     });
-    EP.PRICE_POND=r.PRICE_POND; // último valor (o podría promediarse)
-  });
-  (C.visitados_pattern||[]).forEach(function(r){
-    Object.keys(r).forEach(function(k){
-      if(k!=='PATTERN'&&k!=='PRICE_POND'&&k!=='DISCOUNT_POND')
-        VP[k]=(VP[k]||0)+(+r[k]||0);
-    });
-    VP.PRICE_POND=r.PRICE_POND;
-    VP.DISCOUNT_POND=r.DISCOUNT_POND;
   });
 
-  var totE=EP.ITEMS_EXHIBIDOS||0;
-  var totV=VP.VIEWED_ITEMS||0;
-  var totG=VP.GMV_ITEMS||0;
+  var totE=agg.ITEMS_EXHIBIDOS||0;
+  var totV=agg.VIEWED_ITEMS||0;
+  var totG=agg.GMV_ITEMS||0;
 
   // Helper mini-card
   function miniCard(color, val, lbl){ return '<div style="background:#f5f5f5;border-radius:6px;padding:6px;text-align:center"><div style="font-size:12px;font-weight:700;color:'+color+'">'+val+'</div><div style="font-size:9px;color:#aaa;margin-top:2px">'+lbl+'</div></div>'; }
@@ -1568,23 +1643,20 @@ function renderCalidadOferta(){
   // Cards E/V/G
   var steps=[
     {id:'cal-step-e',lbl:'EXHIBIDOS',color:'#3483FA',
-     total:totE,
-     pct:'100%',
-     riu:  totE>0?((EP.HIGH_ITEMS||0)/totE*100).toFixed(1)+'%':'—',
-     oferta:totE>0?((EP.REAL_OFFER||0)/totE*100).toFixed(1)+'%':'—',
+     total:totE, pct:'100%',
+     riu:   totE>0?((agg.HIGH_ITEMS_E||0)/totE*100).toFixed(1)+'%':'—',
+     oferta:totE>0?((agg.REAL_OFFER_E||0)/totE*100).toFixed(1)+'%':'—',
      dto:'—'},
     {id:'cal-step-v',lbl:'VISITADOS',color:'#F5A623',
-     total:totV,
-     pct:totE>0?(totV/totE*100).toFixed(1)+'% de exhibidos':'—',
-     riu:  totV>0?((VP.HIGH_ITEMS||0)/totV*100).toFixed(1)+'%':'—',
-     oferta:totV>0?(((VP.VIEWED_ITEMS||0)-(VP.NO_OFFER_ITEMS||0))/totV*100).toFixed(1)+'%':'—',
-     dto: VP.DISCOUNT_POND!=null?(VP.DISCOUNT_POND*100).toFixed(1)+'%':'—'},
+     total:totV, pct:totE>0?(totV/totE*100).toFixed(1)+'% de exhibidos':'—',
+     riu:   totV>0?((agg.HIGH_ITEMS_V||0)/totV*100).toFixed(1)+'%':'—',
+     oferta:totV>0?((totV-(agg.NO_OFFER_ITEMS||0))/totV*100).toFixed(1)+'%':'—',
+     dto:  agg.DISCOUNT_POND!=null?(Math.abs(agg.DISCOUNT_POND)*100).toFixed(1)+'%':'—'},
     {id:'cal-step-g',lbl:'ITEMS CON GMV',color:'#00A650',
-     total:totG,
-     pct:totV>0?(totG/totV*100).toFixed(1)+'% de visitados':'—',
-     riu:  totG>0?((VP.HIGH_GMV_ITEMS||0)/totG*100).toFixed(1)+'%':'—',
-     oferta:totG>0?(((VP.GMV_ITEMS||0)-(VP.NO_OFFER_GMV_ITEMS||0))/totG*100).toFixed(1)+'%':'—',
-     dto: VP.DISCOUNT_POND!=null?(VP.DISCOUNT_POND*100).toFixed(1)+'%':'—'}
+     total:totG, pct:totV>0?(totG/totV*100).toFixed(1)+'% de visitados':'—',
+     riu:   totG>0?((agg.HIGH_GMV_ITEMS||0)/totG*100).toFixed(1)+'%':'—',
+     oferta:totG>0?((totG-(agg.NO_OFFER_GMV_ITEMS||0))/totG*100).toFixed(1)+'%':'—',
+     dto:  agg.DISCOUNT_POND!=null?(Math.abs(agg.DISCOUNT_POND)*100).toFixed(1)+'%':'—'}
   ];
   steps.forEach(function(s){
     var el=document.getElementById(s.id); if(!el) return;
@@ -1635,21 +1707,22 @@ function renderCalidadOferta(){
     el.innerHTML=h;
   }
 
+  var noOfertaE=(agg.ITEMS_EXHIBIDOS||0)-(agg.REAL_OFFER_E||0);
   buildFunnelTable(makeRows([
-    {lbl:'Cofinanciado ML', e:EP.OFFER_COFINANCED, v:VP.OFFER_COFINANCED, g:VP.OFFER_COFINANCED_GMV},
-    {lbl:'100% Seller',     e:EP.OFFER_SELLER,     v:VP.OFFER_SELLER,     g:VP.OFFER_SELLER_GMV},
-    {lbl:'Sin Oferta',      e:(EP.ITEMS_EXHIBIDOS||0)-(EP.REAL_OFFER||0), v:VP.NO_OFFER_ITEMS, g:VP.NO_OFFER_GMV_ITEMS}
+    {lbl:'Cofinanciado ML', e:agg.OFFER_COFINANCED_E, v:agg.OFFER_COFINANCED_V, g:agg.OFFER_COFINANCED_GMV},
+    {lbl:'100% Seller',     e:agg.OFFER_SELLER_E,     v:agg.OFFER_SELLER_V,     g:agg.OFFER_SELLER_GMV},
+    {lbl:'Sin Oferta',      e:noOfertaE,               v:agg.NO_OFFER_ITEMS,     g:agg.NO_OFFER_GMV_ITEMS}
   ]), 'cal-tabla-fin');
 
   buildFunnelTable(makeRows([
-    {lbl:'Pre-negociada', e:EP.OFFER_PRENEGOTIATED, v:VP.OFFER_PRENEGOTIATED, g:VP.OFFER_PRENEGOTIATED_GMV},
-    {lbl:'Tiers',         e:EP.OFFER_TIERS,         v:VP.OFFER_TIERS,         g:VP.OFFER_TIERS_GMV},
-    {lbl:'Smart',         e:EP.OFFER_SMART,         v:VP.OFFER_SMART,         g:VP.OFFER_SMART_GMV},
-    {lbl:'Custom',        e:EP.OFFER_CUSTOM,        v:VP.OFFER_CUSTOM,        g:VP.OFFER_CUSTOM_GMV},
-    {lbl:'DOD',           e:EP.OFFER_DOD,           v:VP.OFFER_DOD,           g:VP.OFFER_DOD_GMV},
-    {lbl:'Lightning',     e:EP.OFFER_LIGHTNING,     v:VP.OFFER_LIGHTNING,     g:VP.OFFER_LIGHTNING_GMV},
-    {lbl:'Otros',         e:EP.OFFER_OTHERS,        v:VP.OFFER_OTHERS,        g:VP.OFFER_OTHERS_GMV},
-    {lbl:'Sin Oferta',    e:(EP.ITEMS_EXHIBIDOS||0)-(EP.REAL_OFFER||0), v:VP.NO_OFFER_ITEMS, g:VP.NO_OFFER_GMV_ITEMS}
+    {lbl:'Pre-negociada', e:agg.OFFER_PRENEGOTIATED_E, v:agg.OFFER_PRENEGOTIATED_V, g:agg.OFFER_PRENEGOTIATED_GMV},
+    {lbl:'Tiers',         e:agg.OFFER_TIERS_E,         v:agg.OFFER_TIERS_V,         g:agg.OFFER_TIERS_GMV},
+    {lbl:'Smart',         e:agg.OFFER_SMART_E,         v:agg.OFFER_SMART_V,         g:agg.OFFER_SMART_GMV},
+    {lbl:'Custom',        e:agg.OFFER_CUSTOM_E,        v:agg.OFFER_CUSTOM_V,        g:agg.OFFER_CUSTOM_GMV},
+    {lbl:'DOD',           e:agg.OFFER_DOD_E,           v:agg.OFFER_DOD_V,           g:agg.OFFER_DOD_GMV},
+    {lbl:'Lightning',     e:agg.OFFER_LIGHTNING_E,     v:agg.OFFER_LIGHTNING_V,     g:agg.OFFER_LIGHTNING_GMV},
+    {lbl:'Otros',         e:agg.OFFER_OTHERS_E,        v:agg.OFFER_OTHERS_V,        g:agg.OFFER_OTHERS_GMV},
+    {lbl:'Sin Oferta',    e:noOfertaE,                  v:agg.NO_OFFER_ITEMS,        g:agg.NO_OFFER_GMV_ITEMS}
   ]), 'cal-tabla-tipo');
 }
 
@@ -1667,58 +1740,33 @@ function renderCalidadContainers(){
   if(loading) loading.style.display='none';
   if(body)    body.style.display='';
 
-  // Construir mapa de exhibidos por container
-  var exhibMap={};
-  (C.exhibidos_container||[]).forEach(function(r){ exhibMap[r.CONTAINER_DEAL_ID]=r; });
-
-  // Construir lista de containers desde visitados_container
-  var containersList=(C.visitados_container||[]).map(function(vc){
-    var ec=exhibMap[vc.CONTAINER_DEAL_ID]||{};
-    var sesiones=+(vc.UNIQUE_SESSION||0);
-    var trx=+(vc.TRANSACTIONS_24HS||0);
-    var nmv=+(vc.GMV_LC_168HS_TOTAL||0);
-    var exhibidos=+(ec.ITEMS_EXHIBIDOS||0);
-    var visitados=+(vc.VIEWED_ITEMS||0);
-    var gmvItems=+(vc.GMV_ITEMS||0);
+  // C.containers ya tiene E+V+G unidos desde BQ — sin joinear en JS
+  var containersList=(C.containers||[]).map(function(r){
+    var ses=+(r.UNIQUE_SESSION||0), trx=+(r.TRANSACTIONS_24HS||0);
+    var nmv=+(r.GMV_LC_168HS_TOTAL||0);
+    var exhibidos=+(r.ITEMS_EXHIBIDOS||0), visitados=+(r.VIEWED_ITEMS||0);
     return {
-      DEAL_CONTAINER_ID: vc.CONTAINER_DEAL_ID,
-      CONTAINER_NAME:    vc.CONTAINER_NAME,
-      SESIONES:    sesiones,
-      NMV:         nmv,
-      CVR:         sesiones>0?trx/sesiones*100:0,
-      EXHIBIDOS_ITEMS: exhibidos,
-      VISITADOS_ITEMS: visitados,
-      GMV_ITEMS:   gmvItems,
+      DEAL_CONTAINER_ID: r.CONTAINER_DEAL_ID,
+      CONTAINER_NAME:    r.CONTAINER_NAME,
+      SESIONES:    ses, NMV: nmv,
+      CVR:         ses>0?trx/ses*100:0,
+      EXHIBIDOS_ITEMS: exhibidos, VISITADOS_ITEMS: visitados,
+      GMV_ITEMS:   +(r.GMV_ITEMS||0),
       TASA_VISITA: exhibidos>0?visitados/exhibidos*100:0,
-      DTO_POND:    +(vc.DISCOUNT_POND||0)*100,
-      RIU_PCT_V:   visitados>0?(+(vc.HIGH_ITEMS||0))/visitados*100:0,
-      RIU_PCT_E:   exhibidos>0?(+(ec.HIGH_ITEMS||0))/exhibidos*100:0,
-      REAL_OFFER_V:+(vc.REAL_OFFER||0),
-      REAL_OFFER_E:+(ec.REAL_OFFER||0),
-      // Para drill
-      NO_OFFER_ITEMS:     +(vc.NO_OFFER_ITEMS||0),
-      NO_OFFER_GMV_ITEMS: +(vc.NO_OFFER_GMV_ITEMS||0),
-      OFFER_COFINANCED:   +(vc.OFFER_COFINANCED||0),   OFFER_COFINANCED_GMV:+(vc.OFFER_COFINANCED_GMV||0),
-      OFFER_SELLER:       +(vc.OFFER_SELLER||0),       OFFER_SELLER_GMV:    +(vc.OFFER_SELLER_GMV||0),
-      OFFER_PRENEGOTIATED:+(vc.OFFER_PRENEGOTIATED||0),OFFER_PRENEGOTIATED_GMV:+(vc.OFFER_PRENEGOTIATED_GMV||0),
-      OFFER_TIERS:        +(vc.OFFER_TIERS||0),        OFFER_TIERS_GMV:     +(vc.OFFER_TIERS_GMV||0),
-      OFFER_CUSTOM:       +(vc.OFFER_CUSTOM||0),       OFFER_CUSTOM_GMV:    +(vc.OFFER_CUSTOM_GMV||0),
-      OFFER_DOD:          +(vc.OFFER_DOD||0),          OFFER_DOD_GMV:       +(vc.OFFER_DOD_GMV||0),
-      OFFER_SMART:        +(vc.OFFER_SMART||0),        OFFER_SMART_GMV:     +(vc.OFFER_SMART_GMV||0),
-      OFFER_LIGHTNING:    +(vc.OFFER_LIGHTNING||0),    OFFER_LIGHTNING_GMV: +(vc.OFFER_LIGHTNING_GMV||0),
-      OFFER_OTHERS:       +(vc.OFFER_OTHERS||0),       OFFER_OTHERS_GMV:    +(vc.OFFER_OTHERS_GMV||0),
-      HIGH_ITEMS_V:+(vc.HIGH_ITEMS||0), MID_ITEMS_V:+(vc.MID_ITEMS||0), LOW_ITEMS_V:+(vc.LOW_ITEMS||0),
-      HIGH_GMV:   +(vc.HIGH_GMV_ITEMS||0),MID_GMV:  +(vc.MID_GMV_ITEMS||0),LOW_GMV:  +(vc.LOW_GMV_ITEMS||0)
+      DTO_POND:    +(r.DISCOUNT_POND||0)*100,
+      RIU_PCT_V:   visitados>0?(+(r.HIGH_ITEMS_V||0))/visitados*100:0,
+      // Para drill (campos con _E, _V, _GMV ya vienen del JSON)
+      _r: r  // referencia al row completo para el drill
     };
   });
   containersList.sort(function(a,b){ return b.NMV-a.NMV; });
 
-  var cg=C.container_groups||{};
+  var cg=CAL_CONTAINER_GROUPS;
   var totalNMV=containersList.reduce(function(s,c){return s+c.NMV;},0);
-  // camp_tasa_visita = visitados/exhibidos total
-  var totE=(C.exhibidos_pattern||[]).reduce(function(s,r){return s+(+r.ITEMS_EXHIBIDOS||0);},0);
-  var totV=(C.visitados_pattern||[]).reduce(function(s,r){return s+(+r.VIEWED_ITEMS||0);},0);
-  var campTasa=totE>0?totV/totE*100:0;
+  // camp_tasa_visita desde oferta (ya tiene E+V unidos)
+  var totEtot=(C.oferta||[]).reduce(function(s,r){return s+(+r.ITEMS_EXHIBIDOS||0);},0);
+  var totVtot=(C.oferta||[]).reduce(function(s,r){return s+(+r.VIEWED_ITEMS||0);},0);
+  var campTasa=totEtot>0?totVtot/totEtot*100:0;
 
   var badge=document.getElementById('cal-cnt-badge');
   if(badge) badge.textContent=containersList.length+' containers';
@@ -1779,36 +1827,31 @@ function renderCalidadContainers(){
 }
 
 function calBuildDrillTable(cid, dim){
-  // Buscar container en la lista
-  var exhibMap={};
-  (C.exhibidos_container||[]).forEach(function(r){exhibMap[r.CONTAINER_DEAL_ID]=r;});
-  var vc=(C.visitados_container||[]).find(function(r){return r.CONTAINER_DEAL_ID===cid;})||{};
-  var ec=exhibMap[cid]||{};
+  var r=(C.containers||[]).find(function(x){return x.CONTAINER_DEAL_ID===cid;})||{};
 
   var rows=[];
   if(dim==='FIN'){
-    var vTot=+(vc.VIEWED_ITEMS||0), eTot=+(ec.ITEMS_EXHIBIDOS||0);
     rows=[
-      {cat:'Cofinanciado ML', e:+(ec.OFFER_COFINANCED||0), v:+(vc.OFFER_COFINANCED||0), g:+(vc.OFFER_COFINANCED_GMV||0)},
-      {cat:'100% Seller',     e:+(ec.OFFER_SELLER||0),     v:+(vc.OFFER_SELLER||0),     g:+(vc.OFFER_SELLER_GMV||0)},
-      {cat:'Sin Oferta',      e:eTot-(+(ec.REAL_OFFER||0)), v:+(vc.NO_OFFER_ITEMS||0), g:+(vc.NO_OFFER_GMV_ITEMS||0)}
+      {cat:'Cofinanciado ML', e:+(r.OFFER_COFINANCED_E||0), v:+(r.OFFER_COFINANCED_V||0), g:+(r.OFFER_COFINANCED_GMV||0)},
+      {cat:'100% Seller',     e:+(r.OFFER_SELLER_E||0),     v:+(r.OFFER_SELLER_V||0),     g:+(r.OFFER_SELLER_GMV||0)},
+      {cat:'Sin Oferta',      e:+(r.ITEMS_EXHIBIDOS||0)-(+(r.REAL_OFFER_E||0)), v:+(r.NO_OFFER_ITEMS||0), g:+(r.NO_OFFER_GMV_ITEMS||0)}
     ];
   } else if(dim==='TIPO'){
     rows=[
-      {cat:'Pre-negociada', e:+(ec.OFFER_PRENEGOTIATED||0), v:+(vc.OFFER_PRENEGOTIATED||0), g:+(vc.OFFER_PRENEGOTIATED_GMV||0)},
-      {cat:'Tiers',         e:+(ec.OFFER_TIERS||0),         v:+(vc.OFFER_TIERS||0),         g:+(vc.OFFER_TIERS_GMV||0)},
-      {cat:'Smart',         e:+(ec.OFFER_SMART||0),         v:+(vc.OFFER_SMART||0),         g:+(vc.OFFER_SMART_GMV||0)},
-      {cat:'Custom',        e:+(ec.OFFER_CUSTOM||0),        v:+(vc.OFFER_CUSTOM||0),        g:+(vc.OFFER_CUSTOM_GMV||0)},
-      {cat:'DOD',           e:+(ec.OFFER_DOD||0),           v:+(vc.OFFER_DOD||0),           g:+(vc.OFFER_DOD_GMV||0)},
-      {cat:'Lightning',     e:+(ec.OFFER_LIGHTNING||0),     v:+(vc.OFFER_LIGHTNING||0),     g:+(vc.OFFER_LIGHTNING_GMV||0)},
-      {cat:'Otros',         e:+(ec.OFFER_OTHERS||0),        v:+(vc.OFFER_OTHERS||0),        g:+(vc.OFFER_OTHERS_GMV||0)},
-      {cat:'Sin Oferta',    e:+(ec.ITEMS_EXHIBIDOS||0)-(+(ec.REAL_OFFER||0)), v:+(vc.NO_OFFER_ITEMS||0), g:+(vc.NO_OFFER_GMV_ITEMS||0)}
+      {cat:'Pre-negociada', e:+(r.OFFER_PRENEGOTIATED_E||0), v:+(r.OFFER_PRENEGOTIATED_V||0), g:+(r.OFFER_PRENEGOTIATED_GMV||0)},
+      {cat:'Tiers',         e:+(r.OFFER_TIERS_E||0),         v:+(r.OFFER_TIERS_V||0),         g:+(r.OFFER_TIERS_GMV||0)},
+      {cat:'Smart',         e:+(r.OFFER_SMART_E||0),         v:+(r.OFFER_SMART_V||0),         g:+(r.OFFER_SMART_GMV||0)},
+      {cat:'Custom',        e:+(r.OFFER_CUSTOM_E||0),        v:+(r.OFFER_CUSTOM_V||0),        g:+(r.OFFER_CUSTOM_GMV||0)},
+      {cat:'DOD',           e:+(r.OFFER_DOD_E||0),           v:+(r.OFFER_DOD_V||0),           g:+(r.OFFER_DOD_GMV||0)},
+      {cat:'Lightning',     e:+(r.OFFER_LIGHTNING_E||0),     v:+(r.OFFER_LIGHTNING_V||0),     g:+(r.OFFER_LIGHTNING_GMV||0)},
+      {cat:'Otros',         e:+(r.OFFER_OTHERS_E||0),        v:+(r.OFFER_OTHERS_V||0),        g:+(r.OFFER_OTHERS_GMV||0)},
+      {cat:'Sin Oferta',    e:+(r.ITEMS_EXHIBIDOS||0)-(+(r.REAL_OFFER_E||0)), v:+(r.NO_OFFER_ITEMS||0), g:+(r.NO_OFFER_GMV_ITEMS||0)}
     ];
   } else { // RIU
     rows=[
-      {cat:'High / Boost',  e:+(ec.HIGH_ITEMS||0), v:+(vc.HIGH_ITEMS||0), g:+(vc.HIGH_GMV_ITEMS||0)},
-      {cat:'Mid',           e:+(ec.MID_ITEMS||0),  v:+(vc.MID_ITEMS||0),  g:+(vc.MID_GMV_ITEMS||0)},
-      {cat:'Low / Out',     e:+(ec.LOW_ITEMS||0),  v:+(vc.LOW_ITEMS||0),  g:+(vc.LOW_GMV_ITEMS||0)}
+      {cat:'High / Boost',  e:+(r.HIGH_ITEMS_E||0), v:+(r.HIGH_ITEMS_V||0), g:+(r.HIGH_GMV_ITEMS||0)},
+      {cat:'Mid',           e:+(r.MID_ITEMS_E||0),  v:+(r.MID_ITEMS_V||0),  g:+(r.MID_GMV_ITEMS||0)},
+      {cat:'Low / Out',     e:+(r.LOW_ITEMS_E||0),  v:+(r.LOW_ITEMS_V||0),  g:+(r.LOW_GMV_ITEMS||0)}
     ];
   }
 
@@ -1861,6 +1904,249 @@ function calShowDrillTab(cid, dim, btn){
   if(!contentEl) return;
   contentEl.innerHTML=calBuildDrillTable(cid,dim);
   contentEl.dataset.dim=dim;
+}
+
+// ──────────────────────────────────────────────
+// LANDING ATTR ACIDA (landing_original)
+// ──────────────────────────────────────────────
+function buildLdgoToggles(){
+  var names=[];
+  (D.landing_original||[]).forEach(function(r){if(names.indexOf(r.landing_name)<0)names.push(r.landing_name);});
+  var html='<button class="pill active" onclick="setLdgoFilter(\'ALL\',this)">COMBINADO</button>';
+  names.forEach(function(n){html+='<button class="pill" onclick="setLdgoFilter(\''+n+'\',this)">'+n.toUpperCase()+'</button>';});
+  document.getElementById('ldgo-toggles').innerHTML=html;
+}
+var LDGO_FILTER='ALL';
+function setLdgoFilter(v,btn){
+  LDGO_FILTER=v;
+  btn.parentNode.querySelectorAll('.pill').forEach(function(b){b.classList.remove('active');});
+  btn.classList.add('active');
+  renderLandingOrig();
+}
+function renderLandingOrig(){
+  var rows=D.landing_original||[];
+  if(!rows.length){
+    document.getElementById('ldgo-kpis-eng').innerHTML='<p style="color:#aaa;font-size:13px">Sin datos — correr Verdi para generar landing_original</p>';
+    return;
+  }
+  buildLdgoToggles();
+  var filtered=LDGO_FILTER==='ALL'?rows:rows.filter(function(r){return r.landing_name===LDGO_FILTER;});
+  var byDate={};
+  filtered.forEach(function(r){
+    var d=r.date||r.DATE; if(!byDate[d]) byDate[d]={sessions:0,nmv:0,orders:0,transactions:0,nsi:0,buyers:0,ul:0,uc:0};
+    var b=byDate[d];
+    b.sessions+=+r.sessions||0; b.nmv+=+r.nmv||0; b.orders+=+r.orders||0;
+    b.transactions+=+r.transactions||0; b.nsi+=+r.nsi||0; b.buyers+=+r.buyers||0;
+    b.ul+=+r.users_landing||0; b.uc+=+r.users_container||0;
+  });
+  var dates=Object.keys(byDate).sort();
+  var tot=dates.reduce(function(a,d){var b=byDate[d];
+    a.sessions+=b.sessions;a.nmv+=b.nmv;a.orders+=b.orders;a.transactions+=b.transactions;
+    a.nsi+=b.nsi;a.buyers+=b.buyers;a.ul+=b.ul;a.uc+=b.uc;return a;
+  },{sessions:0,nmv:0,orders:0,transactions:0,nsi:0,buyers:0,ul:0,uc:0});
+  tot.cvr=tot.sessions>0?tot.transactions/tot.sessions:0;
+  tot.nasp=tot.orders>0?tot.nmv/tot.orders:0;
+  tot.nsit=tot.transactions>0?tot.nsi/tot.transactions:0;
+  tot.ctr=tot.ul>0?tot.uc/tot.ul:null;
+
+  var tsMap={};
+  (D.total_site||[]).forEach(function(r){tsMap[r.date||r.DATE]=r;});
+  var tsSess=0,tsNMV=0;
+  dates.forEach(function(d){if(tsMap[d]){tsSess+=+tsMap[d].ts_sessions||0;tsNMV+=+tsMap[d].tgmv_usd||0;}});
+  var shareSess=tsSess>0?tot.sessions/tsSess:null;
+
+  document.getElementById('ldgo-badge-period').textContent='hasta '+fDate(dates[dates.length-1]||'—');
+  document.getElementById('ldgo-chart-sub').textContent=LDGO_FILTER==='ALL'?'Todas las landings':LDGO_FILTER;
+
+  var tgt=(D.targets&&D.targets.landing)||{}, tgtDates=(D.targets&&D.targets.dates)||[];
+  var tgtVal={
+    sessions:tgtAccum(tgt.sessions,tgtDates,dates),
+    share_sessions:tgtAvg(tgt.share_sessions,tgtDates,dates)
+  };
+
+  function renderKpiGroupO(cfg,elId){
+    document.getElementById(elId).innerHTML=cfg.map(function(k){
+      var tgtStr='',cls='';
+      if(k.tgtKey&&tgtVal[k.tgtKey]!=null&&k.raw!=null){
+        var pct=(k.raw-tgtVal[k.tgtKey])/tgtVal[k.tgtKey]*100;
+        cls=pct>=0?'vs-target-ok':pct>=-10?'vs-target-warn':'vs-target-bad';
+        var tc=pct>=0?'ok':pct>=-10?'warn':'bad';
+        var isR=k.tgtKey==='share_sessions';
+        tgtStr='<div class="kpi-target '+tc+'">'+(pct>=0?'▲ ':'▼ ')+Math.abs(pct).toFixed(1)+'% vs target '+(isR?fPct(tgtVal[k.tgtKey],2):fNum(tgtVal[k.tgtKey]))+'</div>';
+      }
+      return '<div class="kpi-card '+cls+'"><div class="kpi-label">'+k.lbl+'</div><div class="kpi-val">'+k.val+'</div><div class="kpi-sub">'+k.sub+'</div>'+tgtStr+'</div>';
+    }).join('');
+  }
+
+  renderKpiGroupO([
+    {lbl:'SESIONES',   val:fNum(tot.sessions),                    sub:'Acumuladas',       raw:tot.sessions,  tgtKey:'sessions'},
+    {lbl:'SHARE SESS', val:shareSess!=null?fPct(shareSess,2):'—', sub:'vs total site',    raw:shareSess,     tgtKey:'share_sessions'},
+    {lbl:'CTR',        val:tot.ctr!=null?fPct(tot.ctr,2):'—',     sub:'Users VPP/Listado',raw:null,          tgtKey:null},
+    {lbl:'CVR',        val:fPct(tot.cvr,2),                       sub:'Trx / Sesiones',   raw:null,          tgtKey:null}
+  ],'ldgo-kpis-eng');
+  renderKpiGroupO([
+    {lbl:'GMV 168hs (USD)',val:fNMV(tot.nmv),               sub:'Atribuido',        raw:null,tgtKey:null},
+    {lbl:'NSI',            val:fNum(tot.nsi),                sub:'Acumulado',        raw:null,tgtKey:null},
+    {lbl:'ORDERS',         val:fNum(tot.orders),             sub:'Acumuladas',       raw:null,tgtKey:null},
+    {lbl:'BUYERS',         val:fNum(tot.buyers),             sub:'Únicos',           raw:null,tgtKey:null},
+    {lbl:'TRX',            val:fNum(tot.transactions),       sub:'Transacciones',    raw:null,tgtKey:null},
+    {lbl:'NASP',           val:fNMV(tot.nasp),               sub:'GMV / Orders',     raw:null,tgtKey:null},
+    {lbl:'NSI/T',          val:tot.nsit?tot.nsit.toFixed(2):'—',sub:'NSI / Trx',    raw:null,tgtKey:null}
+  ],'ldgo-kpis-perf');
+
+  var lbls=dates.map(fDate);
+  var sessTgt=tgtLine(tgt.sessions,tgtDates,dates);
+  if(CH['cLDGO_SESS']) CH['cLDGO_SESS'].destroy();
+  var sDs=[{type:'bar',label:'Sesiones',data:dates.map(function(d){return byDate[d].sessions;}),backgroundColor:'rgba(255,230,0,.85)',borderRadius:3,yAxisID:'y',order:2}];
+  if(sessTgt) sDs.push({type:'bar',label:'Target',data:sessTgt,backgroundColor:'rgba(180,180,180,.5)',borderRadius:3,yAxisID:'y',order:3});
+  sDs.push({type:'line',label:'Share %',data:dates.map(function(d){var ts=tsMap[d];return ts&&+ts.ts_sessions>0?+(byDate[d].sessions/+ts.ts_sessions*100).toFixed(3):null;}),borderColor:'#9B59B6',backgroundColor:'transparent',tension:.3,pointRadius:2,borderWidth:2,yAxisID:'y1',order:1});
+  CH['cLDGO_SESS']=new Chart(document.getElementById('cLDGO_SESS').getContext('2d'),{
+    data:{labels:lbls,datasets:sDs},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:10},boxWidth:10,padding:8}}},
+      scales:{x:{grid:{display:false},ticks:{font:{size:10},maxRotation:45}},y:{position:'left',grid:{color:'#f0f0f0'},ticks:{font:{size:10}}},y1:{position:'right',grid:{drawOnChartArea:false},ticks:{font:{size:10},callback:function(v){return v.toFixed(2)+'%';}}}}}
+  });
+
+  if(CH['cLDGO_NMV']) CH['cLDGO_NMV'].destroy();
+  CH['cLDGO_NMV']=new Chart(document.getElementById('cLDGO_NMV').getContext('2d'),{
+    data:{labels:lbls,datasets:[
+      {type:'bar',label:'GMV 168hs',data:dates.map(function(d){return byDate[d].nmv;}),backgroundColor:'rgba(255,230,0,.85)',borderRadius:3,yAxisID:'yNMV',order:2},
+      {type:'line',label:'CVR %',data:dates.map(function(d){var b=byDate[d];return b.sessions>0?+(b.transactions/b.sessions*100).toFixed(3):null;}),borderColor:'#2196F3',backgroundColor:'transparent',tension:.3,pointRadius:2,borderWidth:2,yAxisID:'yCVR',order:1}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:10},boxWidth:10,padding:8}}},
+      scales:{x:{grid:{display:false},ticks:{font:{size:10},maxRotation:45}},yNMV:{position:'left',grid:{color:'#f0f0f0'},ticks:{font:{size:10},callback:function(v){return fNMV(v);}}},yCVR:{position:'right',grid:{drawOnChartArea:false},ticks:{font:{size:10},callback:function(v){return v.toFixed(2)+'%';}}}}}
+  });
+
+  // Table
+  document.getElementById('ldgo-tbl-badge').textContent=dates.length+' días';
+  var cols=[{k:'date',l:'Fecha',r:false},{k:'sessions',l:'Sesiones',r:true},{k:'nmv',l:'GMV USD',r:true,nmv:true},{k:'orders',l:'Orders',r:true},{k:'transactions',l:'TRX',r:true},{k:'cvr',l:'CVR',r:true,rate:true},{k:'buyers',l:'Buyers',r:true},{k:'nsi',l:'NSI',r:true}];
+  var tblRows=dates.map(function(d){var b=byDate[d];return {date:fDate(d),sessions:b.sessions,nmv:b.nmv,orders:b.orders,transactions:b.transactions,cvr:b.sessions>0?b.transactions/b.sessions:0,buyers:b.buyers,nsi:b.nsi};});
+  var h='<table><thead><tr>'+cols.map(function(c){return '<th style="'+(c.r?'text-align:right':'')+'">'+c.l+'</th>';}).join('')+'</tr></thead><tbody>';
+  tblRows.forEach(function(row){
+    h+='<tr>'+cols.map(function(c){
+      var v=row[c.k];
+      if(c.rate) return '<td>'+fPct(v,2)+'</td>';
+      if(c.nmv)  return '<td>'+fNMV(v)+'</td>';
+      if(!c.r)   return '<td>'+v+'</td>';
+      return '<td>'+fNum(v)+'</td>';
+    }).join('')+'</tr>';
+  });
+  document.getElementById('ldgo-tbl-body').innerHTML=h+'</tbody></table>';
+}
+
+// ── ONE PAGER HELPERS ──
+function opDayIdx(s){return Math.round((new Date(s+'T00:00:00')-window.OP_CAMP_START)/86400000);}
+function opSum(arr,i0,i1){return (arr||[]).slice(i0,i1+1).reduce(function(a,v){return a+(v||0);},0);}
+function opAvg(arr,i0,i1){var v=(arr||[]).slice(i0,i1+1).filter(function(x){return x!==null;});return v.length?v.reduce(function(a,x){return a+x;},0)/v.length:null;}
+function opN(n){if(n===null||n===undefined)return '—';if(Math.abs(n)>=1e6)return (n/1e6).toFixed(1)+'M';if(Math.abs(n)>=1e3)return (n/1e3).toFixed(1)+'K';return Math.round(n).toString();}
+function opP(n,d){return n===null?'—':(n*100).toFixed(d||2)+'%';}
+function opU(n){return n===null?'—':'$'+opN(n);}
+function opDt(a,t,isPP){
+  if(a===null||t===null||t===0)return {text:'—',cls:'op-neut'};
+  var diff=a-t,sign=diff>=0?'+':'',cls=diff>=0?'op-pos':'op-neg';
+  if(isPP)return {text:sign+(diff*100).toFixed(2)+'pp',cls:cls};
+  return {text:sign+(diff/Math.abs(t)*100).toFixed(1)+'%',cls:cls};
+}
+function opSet(vi,di,vt,dt){
+  var ve=document.getElementById(vi),de=document.getElementById(di);
+  if(ve)ve.textContent=vt;
+  if(de){de.textContent=dt.text;de.className='op-badge '+dt.cls;}
+}
+function opKPIs(){
+  var OP=window.OP_DATA,CD=window.OP_CAMP_DATES,DL=window.OP_DAY_LABELS;
+  if(!OP||!CD)return;
+  var from=document.getElementById('op-from'),to=document.getElementById('op-to');
+  if(!from||!to)return;
+  var i0=Math.max(0,opDayIdx(from.value)),i1=Math.min(15,opDayIdx(to.value));
+  if(i0>i1)return;
+  var lbl=document.getElementById('op-period-lbl');
+  if(lbl)lbl.textContent=(i0===0&&i1===15)?'20/4 → 5/5 (acum.)':(DL[i0]+' → '+DL[i1]+' (acum.)');
+  // MS
+  var msCtr=opAvg(OP.ms_ctr,i0,i1),msTgt=opAvg(OP.ms_ctr_tgt,i0,i1);
+  opSet('op-ms-ctr-v','op-ms-ctr-d',opP(msCtr),opDt(msCtr,msTgt,true));
+  opSet('op-cel-ctr-v','op-cel-ctr-d',opP(opAvg(OP.celebrity_ctr,i0,i1)),{text:'—',cls:'op-neut'});
+  opSet('op-tac-ctr-v','op-tac-ctr-d',opP(opAvg(OP.tachados_ctr,i0,i1)),{text:'—',cls:'op-neut'});
+  // Landing
+  var lS=opSum(OP.landing_ses,i0,i1)||null,lSt=opSum(OP.landing_ses_tgt,i0,i1)||null;
+  opSet('op-ldg-ses-v','op-ldg-ses-d',opN(lS),opDt(lS,lSt,false));
+  var lSh=opAvg(OP.landing_share,i0,i1),lSht=opAvg(OP.landing_share_tgt,i0,i1);
+  opSet('op-ldg-sh-v','op-ldg-sh-d',opP(lSh),opDt(lSh,lSht,true));
+  var lC=opAvg(OP.landing_ctr,i0,i1),lCt=opAvg(OP.landing_ctr_tgt,i0,i1);
+  opSet('op-ldg-ctr-v','op-ldg-ctr-d',opP(lC),opDt(lC,lCt,true));
+  // Containers
+  var cS=opSum(OP.cont_ses,i0,i1)||null,cSt=opSum(OP.cont_ses_tgt,i0,i1)||null;
+  opSet('op-cnt-ses-v','op-cnt-ses-d',opN(cS),opDt(cS,cSt,false));
+  var cN=opSum(OP.cont_nmv,i0,i1)||null,cNt=opSum(OP.cont_nmv_tgt,i0,i1)||null;
+  opSet('op-cnt-nmv-v','op-cnt-nmv-d',opU(cN),opDt(cN,cNt,false));
+  var cNp=opAvg(OP.cont_nmvpct,i0,i1),cNpt=opAvg(OP.cont_nmvpct_tgt,i0,i1);
+  opSet('op-cnt-nmvp-v','op-cnt-nmvp-d',opP(cNp),opDt(cNp,cNpt,true));
+  opSet('op-cnt-asp-v','op-cnt-asp-d',opU(opAvg(OP.cont_asp,i0,i1)),{text:'—',cls:'op-neut'});
+  var cNsi=opSum(OP.cont_nsi,i0,i1)||null,cNsit=opSum(OP.cont_nsi_tgt,i0,i1)||null;
+  opSet('op-cnt-nsi-v','op-cnt-nsi-d',opN(cNsi),opDt(cNsi,cNsit,false));
+  var cCvr=opAvg(OP.cont_cvr,i0,i1),cCvrt=opAvg(OP.cont_cvr_tgt,i0,i1);
+  opSet('op-cnt-cvr-v','op-cnt-cvr-d',opP(cCvr),opDt(cCvr,cCvrt,true));
+  // Calidad (static)
+  function calDt(v,t){if(v===null)return {text:'—',cls:'op-neut'};var cls=t===null?'op-neut':v>=t?'op-pos':'op-neg';return {text:v.toFixed(1)+'%'+(t!==null?' / '+t.toFixed(1)+'%':''),cls:cls};}
+  opSet('op-cal-riu-v','op-cal-riu-d',OP.calidad_riu_high!==null?OP.calidad_riu_high.toFixed(1)+'%':'—',calDt(OP.calidad_riu_high,null));
+  opSet('op-cal-of-v','op-cal-of-d',OP.calidad_con_oferta!==null?OP.calidad_con_oferta.toFixed(1)+'%':'—',calDt(OP.calidad_con_oferta,null));
+  opSet('op-cal-dto-v','op-cal-dto-d',OP.calidad_dto_pond!==null?OP.calidad_dto_pond.toFixed(1)+'%':'—',calDt(OP.calidad_dto_pond,null));
+}
+function opFmtK(n){if(n===null||n===undefined)return '—';if(Math.abs(n)>=1e6)return (n/1e6).toFixed(1)+'M';if(Math.abs(n)>=1e3)return (n/1e3).toFixed(1)+'K';return Math.round(n).toString();}
+function opFunnel(view){
+  var OP=window.OP_DATA; if(!OP)return;
+  document.querySelectorAll('[data-opv]').forEach(function(b){b.classList.remove('active');});
+  var btn=document.querySelector('[data-opv="'+view+'"]'); if(btn)btn.classList.add('active');
+  var th=document.getElementById('op-f-thead'),tb=document.getElementById('op-f-tbody'); if(!th||!tb)return;
+  if(view==='total'){
+    var s=OP.calidad_funnel_steps||[];
+    var e=s.find(function(r){return r.paso==='Exhibidos';}),v=s.find(function(r){return r.paso==='Visitados';}),g=s.find(function(r){return r.paso==='Vendidos';});
+    var pV=e&&v?(v.items/e.items*100).toFixed(1)+'%':'—',pG=v&&g?(g.items/v.items*100).toFixed(1)+'%':'—';
+    th.innerHTML='<tr></tr>';
+    tb.innerHTML='<tr><td colspan="6" style="padding:6px 0;"><div style="display:flex;align-items:center;gap:0;width:100%;">'
+      +'<div style="flex:1;text-align:center;padding:10px 6px;background:#f8f8fc;border-radius:6px;"><div style="font-size:9px;color:#aaa;font-weight:700;text-transform:uppercase;margin-bottom:4px;">Exhibidos</div><div style="font-size:20px;font-weight:800;color:#1a1a3e;">'+opFmtK(e&&e.items)+'</div></div>'
+      +'<div style="display:flex;flex-direction:column;align-items:center;padding:0 8px;"><div style="font-size:9px;color:#9c6ef0;font-weight:700;">'+pV+'</div><div style="font-size:14px;color:#ccc;">→</div></div>'
+      +'<div style="flex:1;text-align:center;padding:10px 6px;background:#f0f0fa;border-radius:6px;"><div style="font-size:9px;color:#aaa;font-weight:700;text-transform:uppercase;margin-bottom:4px;">Visitados</div><div style="font-size:20px;font-weight:800;color:#1a1a3e;">'+opFmtK(v&&v.items)+'</div></div>'
+      +'<div style="display:flex;flex-direction:column;align-items:center;padding:0 8px;"><div style="font-size:9px;color:#9c6ef0;font-weight:700;">'+pG+'</div><div style="font-size:14px;color:#ccc;">→</div></div>'
+      +'<div style="flex:1;text-align:center;padding:10px 6px;background:#f3eeff;border-radius:6px;"><div style="font-size:9px;color:#aaa;font-weight:700;text-transform:uppercase;margin-bottom:4px;">Con GMV</div><div style="font-size:20px;font-weight:800;color:#9c6ef0;">'+opFmtK(g&&g.items)+'</div></div>'
+      +'</div></td></tr>';
+  } else if(view==='fin'||view==='oferta'){
+    var rows=view==='fin'?OP.calidad_funnel_fin:OP.calidad_funnel_oferta;
+    th.innerHTML='<tr><th></th><th>Exhibidos</th><th>Visitados</th><th>Con GMV</th><th>%Visit</th><th>%Conv</th></tr>';
+    tb.innerHTML=(rows||[]).map(function(r){return '<tr><td>'+r.categoria+'</td><td class="op-fval">'+opFmtK(r.exhibidos)+'</td><td class="op-fval">'+opFmtK(r.visitados)+'</td><td class="op-fval">'+opFmtK(r.vendidos)+'</td><td class="op-fpct">'+r.pct_visita.toFixed(1)+'%</td><td class="op-fpct">'+r.pct_conv.toFixed(1)+'%</td></tr>';}).join('');
+  } else {
+    var cr=OP.calidad_funnel_containers||[];
+    th.innerHTML='<tr><th>Container</th><th>Exhibidos</th><th>Sin Oferta</th><th>% Sin Oferta</th></tr>';
+    tb.innerHTML=cr.map(function(r){return '<tr><td style="font-size:9px;">'+r.container+'</td><td class="op-fval">'+opFmtK(r.exhibidos)+'</td><td class="op-fval" style="color:#cc2222;">'+opFmtK(r.sin_oferta)+'</td><td class="op-fpct" style="color:#cc2222;">'+r.pct_sin_oferta.toFixed(1)+'%</td></tr>';}).join('');
+  }
+}
+function opSetPeriod(period){
+  var CD=window.OP_CAMP_DATES; if(!CD) return;
+  var cs=CD[0], ce=CD[CD.length-1];
+  var from, to;
+  from=cs; // siempre desde el inicio de campaña
+  to = period==='acum' ? ce : period; // hasta el día elegido
+  var fEl=document.getElementById('op-from'), tEl=document.getElementById('op-to');
+  if(fEl) fEl.value=from;
+  if(tEl) tEl.value=to;
+  // Update pill active state
+  document.querySelectorAll('[id^="op-pill-"]').forEach(function(b){
+    b.classList.toggle('active', b.id==='op-pill-'+period);
+  });
+  opKPIs();
+}
+function opContView(view){
+  var isC=view==='chart';
+  var cv=document.getElementById('op-cnt-ch-view'),tv=document.getElementById('op-cnt-top-view'),leg=document.getElementById('op-cnt-legend');
+  if(cv)cv.style.display=isC?'block':'none';
+  if(tv)tv.style.display=isC?'none':'flex';
+  if(leg)leg.style.display=isC?'flex':'none';
+  var bc=document.getElementById('op-btn-ch'),bt=document.getElementById('op-btn-top');
+  if(bc)bc.classList.toggle('active',isC);if(bt)bt.classList.toggle('active',!isC);
+  if(!isC){
+    var OP=window.OP_DATA; if(!OP)return;
+    var nb=document.getElementById('op-tbody-nmv'),cb=document.getElementById('op-tbody-cvr');
+    if(nb)nb.innerHTML=(OP.top_cont_nmv||[]).map(function(r){return '<tr><td style="font-size:9px;">'+r.container+'</td><td class="op-fval">'+opFmtK(r.nmv)+'</td><td class="op-fpct">'+r.nmv_share.toFixed(1)+'%</td><td class="op-fpct">'+r.cvr.toFixed(2)+'%</td></tr>';}).join('');
+    if(cb)cb.innerHTML=(OP.top_cont_cvr||[]).map(function(r){return '<tr><td style="font-size:9px;">'+r.container+'</td><td class="op-fval">'+opFmtK(r.sessions)+'</td><td class="op-fpct">'+r.cvr.toFixed(2)+'%</td><td class="op-fpct">'+r.nmv_share.toFixed(1)+'%</td></tr>';}).join('');
+  }
 }
 
 load();
