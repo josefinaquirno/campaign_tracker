@@ -1476,7 +1476,8 @@ function buildCmpBar(){
   var bar=document.getElementById('cmp-bar-inner');
   if(!bar) return;
   var others = CAMPAIGNS.filter(function(c){return !ACTIVE_CAMPAIGN||c.id!==ACTIVE_CAMPAIGN.id;});
-  if(!others.length){
+  var hist = D.historical||[];
+  if(!others.length && !hist.length){
     bar.innerHTML='<span class="no-hist">Sin otras campañas para comparar</span>';
     return;
   }
@@ -1485,12 +1486,29 @@ function buildCmpBar(){
     var sel = COMP_CAMPAIGN && COMP_CAMPAIGN.id===c.id ? ' selected' : '';
     html+='<option value="'+c.id+'"'+sel+'>'+c.name+' ('+c.start+' → '+c.end+')</option>';
   });
+  hist.forEach(function(h,i){
+    var hid='hist_'+i;
+    var sel = COMP_CAMPAIGN && COMP_CAMPAIGN.id===hid ? ' selected' : '';
+    html+='<option value="'+hid+'"'+sel+'>'+h.name+' ('+h.start+' → '+h.end+')</option>';
+  });
   html+='</select>';
   bar.innerHTML=html;
 }
 
 function setCmpCampaign(id){
   if(!id){ COMP_D=null; COMP_CAMPAIGN=null; CMP_IDX=''; renderAll(); return; }
+  // Backward compat: entries de historical.json
+  if(id.indexOf('hist_')===0){
+    var idx=parseInt(id.replace('hist_',''));
+    var h=(D.historical||[])[idx]; if(!h) return;
+    COMP_CAMPAIGN={id:id, name:h.name, start:h.start||'', end:h.end||''};
+    COMP_D={campaign:{name:h.name,start:h.start,end:h.end},
+            ms:h.ms||[], landing:h.landing||[], container:h.container||[],
+            total_containers:h.total_containers||[], total_site:h.total_site||[],
+            targets:h.targets||{}};
+    CMP_IDX='1'; renderAll(); return;
+  }
+  // Campañas del registro campaigns.json
   var camp=CAMPAIGNS.filter(function(c){return c.id===id;})[0];
   if(!camp) return;
   COMP_CAMPAIGN=camp; CMP_IDX='1';
