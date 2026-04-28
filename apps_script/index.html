@@ -194,6 +194,12 @@
   </div>
 </div>
 
+<!-- CAMPAIGN SELECTOR BAR -->
+<div id="camp-bar" style="background:#fff;border-bottom:1px solid #eee;padding:6px 24px;display:flex;align-items:center;gap:10px;">
+  <span style="font-size:11px;color:#888;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Campaña:</span>
+  <div id="camp-pills" style="display:flex;gap:6px;flex-wrap:wrap;"><span style="font-size:11px;color:#bbb">Cargando...</span></div>
+</div>
+
 <!-- TABS NAV -->
 <div class="tabs-nav">
   <button class="tab-btn active" onclick="switchTab('summary',this)">Summary</button>
@@ -425,20 +431,13 @@ var C = { camp_tasa_visita:0, tot_exhib:0, tot_visit:0, tot_gmv_i:0,
           steps:[], financiacion:[], tipo_oferta:[], bench:{},
           containers:[], drill:[], container_groups:{}, refreshed_at:'' };
 var CAL_OPEN_DRILL = null;
-var CAL_CONTAINER_GROUPS = {
-  'MLA1587833':'FOCO','MLA1593960':'FOCO','MLA1587835':'FOCO',
-  'MLA1587824':'FOCO','MLA1587826':'FOCO','MLA1587827':'FOCO',
-  'MLA1587829':'FOCO','MLA1587820':'FOCO','MLA1593102':'FOCO',
-  'MLA1597617':'FOCO','MLA1597616':'FOCO','MLA1585322':'FOCO',
-  'MLA1587823':'FOCO','MLA1587821':'FOCO',
-  'MLA1593114':'NO FOCO','MLA1587855':'NO FOCO','MLA1587853':'NO FOCO',
-  'MLA1587847':'NO FOCO','MLA1587861':'NO FOCO','MLA1587846':'NO FOCO',
-  'MLA1587850':'NO FOCO','MLA1587836':'NO FOCO','MLA1587845':'NO FOCO',
-  'MLA1587843':'NO FOCO','MLA1587852':'NO FOCO','MLA1587839':'NO FOCO',
-  'MLA1593998':'NO FOCO',
-  'MLA1594868':'TÁCTICO','MLA1587867':'TÁCTICO','MLA1594869':'TÁCTICO',
-  'MLA1587863':'TÁCTICO','MLA1587857':'TÁCTICO'
-};
+// CAL_CONTAINER_GROUPS se carga dinámicamente desde campaigns.json
+var CAL_CONTAINER_GROUPS = {};
+// Multi-campaign state
+var CAMPAIGNS = [];
+var ACTIVE_CAMPAIGN = null;
+var COMP_D = null;
+var COMP_CAMPAIGN = null;
 var CH = {};
 var ACTIVE_TAB = 'summary';
 var LDG_FILTER = 'ALL';
@@ -458,27 +457,77 @@ var PALETTE=['#FFE600','#1a1a2e','#4caf50','#2196F3','#FF9800','#9C27B0','#00BCD
 // ──────────────────────────────────────────────
 // LOAD
 // ──────────────────────────────────────────────
-function load(){
+function _loadCampaignData(camp){
+  var df = camp ? camp.data_file   : 'data.json';
+  var cf = camp ? camp.calidad_file: 'calidad.json';
+  var of = camp ? camp.oferta_file : 'oferta.json';
   if(typeof google!=='undefined'&&google.script){
     google.script.run
       .withSuccessHandler(function(d){init(d);})
       .withFailureHandler(function(e){document.getElementById('loading').textContent='Error: '+e.message;})
-      .getJsonData();
-    // Calidad carga en segundo plano
+      .getJsonData(df);
     google.script.run
       .withSuccessHandler(function(c){initCalidad(c);})
-      .withFailureHandler(function(){/* silencioso */})
-      .getCalidadData();
+      .withFailureHandler(function(){})
+      .getCalidadData(cf, of);
   } else {
-    fetch('data.json?v='+Date.now())
-      .then(function(r){return r.json();})
-      .then(function(d){init(d);})
-      .catch(function(e){document.getElementById('loading').textContent='Error cargando datos: '+e.message;});
-    fetch('calidad.json?v='+Date.now())
-      .then(function(r){return r.json();})
-      .then(function(c){initCalidad(c);})
-      .catch(function(){});
+    fetch((df||'data.json')+'?v='+Date.now())
+      .then(function(r){return r.json();}).then(function(d){init(d);})
+      .catch(function(e){document.getElementById('loading').textContent='Error: '+e.message;});
+    fetch((cf||'calidad.json')+'?v='+Date.now())
+      .then(function(r){return r.json();}).then(function(c){initCalidad(c);}).catch(function(){});
   }
+}
+
+function load(){
+  var onCampaigns = function(campaigns){
+    CAMPAIGNS = campaigns || [];
+    ACTIVE_CAMPAIGN = CAMPAIGNS.filter(function(c){return c.status==='active';})[0]
+                   || CAMPAIGNS[CAMPAIGNS.length-1] || null;
+    if(ACTIVE_CAMPAIGN) CAL_CONTAINER_GROUPS = ACTIVE_CAMPAIGN.container_groups || {};
+    buildCampaignSelector();
+    _loadCampaignData(ACTIVE_CAMPAIGN);
+  };
+  if(typeof google!=='undefined'&&google.script){
+    google.script.run
+      .withSuccessHandler(onCampaigns)
+      .withFailureHandler(function(){ onCampaigns([]); })
+      .getCampaigns();
+  } else {
+    fetch('campaigns.json?v='+Date.now())
+      .then(function(r){return r.json();}).then(onCampaigns)
+      .catch(function(){ onCampaigns([]); });
+  }
+}
+
+function switchCampaign(id){
+  var camp = CAMPAIGNS.filter(function(c){return c.id===id;})[0];
+  if(!camp) return;
+  ACTIVE_CAMPAIGN = camp;
+  CAL_CONTAINER_GROUPS = camp.container_groups || {};
+  COMP_D = null; COMP_CAMPAIGN = null; CMP_IDX = '';
+  LDG_FILTER = 'ALL'; LDGO_FILTER = 'ALL';
+  MS_BUCKET = 'ALL'; MS_SEG_FILTER = 'ALL'; CNT_DATE_FILTER = 'ALL';
+  document.getElementById('loading').style.display='block';
+  document.getElementById('content').style.display='none';
+  buildCampaignSelector();
+  buildCmpBar();
+  _loadCampaignData(camp);
+}
+
+function buildCampaignSelector(){
+  var el = document.getElementById('camp-pills');
+  if(!el) return;
+  if(!CAMPAIGNS.length){
+    el.innerHTML='<span style="font-size:11px;color:#bbb">—</span>';
+    return;
+  }
+  el.innerHTML = CAMPAIGNS.map(function(c){
+    var active = ACTIVE_CAMPAIGN && c.id === ACTIVE_CAMPAIGN.id;
+    var dates = c.start.slice(5).replace('-','/') + ' → ' + c.end.slice(5).replace('-','/');
+    return '<button class="pill'+(active?' active':'')+'" onclick="switchCampaign(\''+c.id+'\')">'
+      + c.name + ' <span style="font-size:9px;opacity:.7">('+dates+')</span></button>';
+  }).join('');
 }
 
 function initCalidad(c){
@@ -578,9 +627,11 @@ function renderSummary(){
   if(!el) return;
 
   var camp=D.campaign||{};
-  var CAMP_DATES=['2026-04-20','2026-04-21','2026-04-22','2026-04-23','2026-04-24','2026-04-25','2026-04-26','2026-04-27','2026-04-28','2026-04-29','2026-04-30','2026-05-01','2026-05-02','2026-05-03','2026-05-04','2026-05-05'];
-  var DAY_LABELS=['20/4','21/4','22/4','23/4','24/4','25/4','26/4','27/4','28/4','29/4','30/4','1/5','2/5','3/5','4/5','5/5'];
-  window.OP_CAMP_START=new Date('2026-04-20T00:00:00');
+  var _cs=camp.start||'2026-04-20', _ce=camp.end||'2026-05-05';
+  var CAMP_DATES=[], _di=new Date(_cs+'T00:00:00'), _de=new Date(_ce+'T00:00:00');
+  while(_di<=_de){CAMP_DATES.push(_di.toISOString().slice(0,10));_di.setDate(_di.getDate()+1);}
+  var DAY_LABELS=CAMP_DATES.map(function(dd){return dd.slice(5).replace(/^0/,'').replace('-','/');});
+  window.OP_CAMP_START=new Date(_cs+'T00:00:00');
   window.OP_CAMP_DATES=CAMP_DATES;
   window.OP_DAY_LABELS=DAY_LABELS;
 
@@ -667,12 +718,13 @@ function renderSummary(){
   OP.top_cont_cvr=(C.containers||[]).filter(function(r){return (+r.UNIQUE_SESSION||0)>50;}).slice().sort(function(a,b){return (+b.TRANSACTIONS_24HS||0)/(+b.UNIQUE_SESSION||1)-(+a.TRANSACTIONS_24HS||0)/(+a.UNIQUE_SESSION||1);}).slice(0,5).map(function(r){var nmv=+r.GMV_LC_168HS_TOTAL||0,ses=+r.UNIQUE_SESSION||0,trx=+r.TRANSACTIONS_24HS||0;return {container:shortCN(r.CONTAINER_NAME),nmv:nmv,sessions:ses,orders:trx,nmv_share:totNMV>0?nmv/totNMV*100:0,cvr:ses>0?trx/ses*100:0};});
   window.OP_DATA=OP;
 
-  // Image URLs — push images to docs/ folder in GitHub repo
+  // Image URLs — loaded from campaigns.json per-campaign config
   var RAW='https://raw.githubusercontent.com/josefinaquirno/campaign_tracker/main/docs/';
-  var IMG_CEL=RAW+'MS_GENERAL_CELEBRITY_MKP_DEMAND_5_5_ABRIL_2026%20.jpg';
-  var IMG_TAC=RAW+'MS_GENERAL_TACHADOS_MKP_DEMAND_5_5_ABRIL_2026.jpg';
+  var _imgs=(ACTIVE_CAMPAIGN&&ACTIVE_CAMPAIGN.images)||{};
+  var IMG_CEL=_imgs.celebrity?RAW+encodeURIComponent(_imgs.celebrity):'';
+  var IMG_TAC=_imgs.tachados ?RAW+encodeURIComponent(_imgs.tachados) :'';
 
-  var cs=camp.start||'2026-04-20', ce=camp.end||'2026-05-05';
+  var cs=_cs, ce=_ce;
 
   // Quick-period toggle helpers
   var today=new Date(), todayStr=today.toISOString().slice(0,10);
@@ -856,20 +908,19 @@ function renderMS(){
   var tgt = (D.targets&&D.targets.ms)||{};
 
   // Historical comparison totals
-  var histTot={clicks:0,prints:0,ctr:0}, histName='';
-  if(CMP_IDX!==''&&(D.historical||[]).length){
-    var histCmp=D.historical[+CMP_IDX];
-    histName=histCmp.name||'';
-    (histCmp.ms||[]).forEach(function(r){histTot.clicks+=+r.clicks||0; histTot.prints+=+r.prints||0;});
+  var histTot={clicks:0,prints:0,ctr:0}, histNameMS='';
+  if(COMP_D){
+    histNameMS=(COMP_CAMPAIGN&&COMP_CAMPAIGN.name)||'Historial';
+    (COMP_D.ms||[]).forEach(function(r){histTot.clicks+=+r.clicks||0; histTot.prints+=+r.prints||0;});
     histTot.ctr=histTot.prints>0?histTot.clicks/histTot.prints:0;
   }
-  var hasHist=histName!==''&&histTot.prints>0;
+  var hasHist=histNameMS!==''&&histTot.prints>0;
 
   function histDelta(cur,ref){
     if(!hasHist||ref==null||ref===0||cur==null) return '';
     var pct=(cur-ref)/ref*100;
     var cls=pct>=0?'ok':'bad';
-    return '<div class="kpi-target '+cls+'">'+(pct>=0?'▲ ':'▼ ')+Math.abs(pct).toFixed(1)+'% vs '+histName+'</div>';
+    return '<div class="kpi-target '+cls+'">'+(pct>=0?'▲ ':'▼ ')+Math.abs(pct).toFixed(1)+'% vs '+histNameMS+'</div>';
   }
 
   // Segmentation KPIs
@@ -1423,19 +1474,38 @@ function sortCnt(col){if(SORT_COL.cnt===col)SORT_ASC.cnt=!SORT_ASC.cnt;else{SORT
 // ──────────────────────────────────────────────
 function buildCmpBar(){
   var bar=document.getElementById('cmp-bar-inner');
-  if(!(D.historical||[]).length){
-    bar.innerHTML='<span class="no-hist">Sin campañas históricas cargadas aún</span>';
+  if(!bar) return;
+  var others = CAMPAIGNS.filter(function(c){return !ACTIVE_CAMPAIGN||c.id!==ACTIVE_CAMPAIGN.id;});
+  if(!others.length){
+    bar.innerHTML='<span class="no-hist">Sin otras campañas para comparar</span>';
     return;
   }
   var html='<select onchange="setCmpCampaign(this.value)"><option value="">— Sin comparación —</option>';
-  D.historical.forEach(function(h,i){
-    html+='<option value="'+i+'"'+(CMP_IDX===String(i)?' selected':'')+'>'+h.name+' ('+h.start+' → '+h.end+')</option>';
+  others.forEach(function(c){
+    var sel = COMP_CAMPAIGN && COMP_CAMPAIGN.id===c.id ? ' selected' : '';
+    html+='<option value="'+c.id+'"'+sel+'>'+c.name+' ('+c.start+' → '+c.end+')</option>';
   });
   html+='</select>';
   bar.innerHTML=html;
 }
 
-function setCmpCampaign(idx){ CMP_IDX=idx; renderAll(); }
+function setCmpCampaign(id){
+  if(!id){ COMP_D=null; COMP_CAMPAIGN=null; CMP_IDX=''; renderAll(); return; }
+  var camp=CAMPAIGNS.filter(function(c){return c.id===id;})[0];
+  if(!camp) return;
+  COMP_CAMPAIGN=camp; CMP_IDX='1';
+  if(typeof google!=='undefined'&&google.script){
+    google.script.run
+      .withSuccessHandler(function(d){COMP_D=d; renderAll();})
+      .withFailureHandler(function(){COMP_D=null; renderAll();})
+      .getJsonData(camp.data_file);
+  } else {
+    fetch((camp.data_file||'data.json')+'?v='+Date.now())
+      .then(function(r){return r.json();})
+      .then(function(d){COMP_D=d; renderAll();})
+      .catch(function(){COMP_D=null; renderAll();});
+  }
+}
 function setSumMSFilter(v){ SUM_MS_FILTER=v; renderSummary(); }
 function getMSSubBucket(li){ var l=(li||'').toLowerCase(); if(l.indexOf('tachado')>=0)return 'tachado'; if(l.indexOf('celebrity')>=0)return 'celebrity'; return 'principal'; }
 
@@ -1457,9 +1527,9 @@ function cmpAggByDate(arr){
 function renderInlineComparison(placement, containerId){
   var el=document.getElementById(containerId);
   if(!el) return;
-  if(CMP_IDX===''||!(D.historical||[]).length){ el.innerHTML=''; return; }
+  if(!COMP_D){ el.innerHTML=''; return; }
 
-  var hist=D.historical[+CMP_IDX];
+  var hist=COMP_D;
   var curName=(D.campaign&&D.campaign.name)||'Actual';
   var tgtPl=(D.targets&&D.targets[placement])||{};
   var tgtDatesArr=(D.targets&&D.targets.dates)||[];
@@ -1509,13 +1579,14 @@ function renderInlineComparison(placement, containerId){
   var chartId='cCMP_'+placement+'_'+CMP_IDX;
   var dayLabels=Array.from({length:days},function(_,i){return 'D'+(i+1);});
 
+  var histName=(COMP_CAMPAIGN&&COMP_CAMPAIGN.name)||'Historial';
   var h='<div class="cmp-inline">';
-  h+='<div class="cmp-inline-title">COMPARACIÓN DÍA A DÍA <span class="badge">'+hist.name+'</span> + TARGETS</div>';
+  h+='<div class="cmp-inline-title">COMPARACIÓN DÍA A DÍA <span class="badge">'+histName+'</span> + TARGETS</div>';
 
   // Chart
   h+='<div class="chart-card" style="margin-bottom:14px">';
   h+='<div class="chart-title">'+chartLabel+' — día a día</div>';
-  h+='<div class="chart-sub">'+curName+' (amarillo) · Target (gris) · '+hist.name+' (violeta) · D1 = primer día activo</div>';
+  h+='<div class="chart-sub">'+curName+' (amarillo) · Target (gris) · '+histName+' (violeta) · D1 = primer día activo</div>';
   h+='<div class="chart-wrap"><canvas id="'+chartId+'"></canvas></div>';
   h+='</div>';
 
@@ -1528,7 +1599,7 @@ function renderInlineComparison(placement, containerId){
       h+='<th>'+c.l+'<br><small style="font-weight:400;color:#2e7d32;font-size:9px">Target</small></th>';
       h+='<th style="min-width:44px">Δ Tgt</th>';
     }
-    h+='<th>'+c.l+'<br><small style="font-weight:400;color:#9B59B6;font-size:9px">'+hist.name+'</small></th>';
+    h+='<th>'+c.l+'<br><small style="font-weight:400;color:#9B59B6;font-size:9px">'+histName+'</small></th>';
     h+='<th style="min-width:44px">Δ Hist</th>';
   });
   h+='</tr></thead><tbody>';
@@ -1580,7 +1651,7 @@ function renderInlineComparison(placement, containerId){
       {label:'Target',  data:tgtVals,  borderColor:'#aaa',   backgroundColor:'transparent',       fill:false,tension:.3,pointRadius:2,borderWidth:1.5,borderDash:[6,4]}
     );
     datasets.push(
-      {label:hist.name, data:histVals, borderColor:'#9B59B6',backgroundColor:'transparent',       fill:false,tension:.3,pointRadius:4,borderWidth:2, borderDash:[5,4]}
+      {label:histName, data:histVals, borderColor:'#9B59B6',backgroundColor:'transparent',       fill:false,tension:.3,pointRadius:4,borderWidth:2, borderDash:[5,4]}
     );
     CH[chartId]=new Chart(document.getElementById(chartId).getContext('2d'),{
       type:'line',data:{labels:dayLabels,datasets:datasets},options:opts
@@ -2056,10 +2127,11 @@ function opKPIs(){
   if(!OP||!CD)return;
   var from=document.getElementById('op-from'),to=document.getElementById('op-to');
   if(!from||!to)return;
-  var i0=Math.max(0,opDayIdx(from.value)),i1=Math.min(15,opDayIdx(to.value));
+  var maxIdx=CD.length-1;
+  var i0=Math.max(0,opDayIdx(from.value)),i1=Math.min(maxIdx,opDayIdx(to.value));
   if(i0>i1)return;
   var lbl=document.getElementById('op-period-lbl');
-  if(lbl)lbl.textContent=(i0===0&&i1===15)?'20/4 → 5/5 (acum.)':(DL[i0]+' → '+DL[i1]+' (acum.)');
+  if(lbl)lbl.textContent=(i0===0&&i1===maxIdx)?(DL[0]+' → '+DL[maxIdx]+' (acum.)'):(DL[i0]+' → '+DL[i1]+' (acum.)');
   // MS
   var msCtr=opAvg(OP.ms_ctr,i0,i1),msTgt=opAvg(OP.ms_ctr_tgt,i0,i1);
   opSet('op-ms-ctr-v','op-ms-ctr-d',opP(msCtr),opDt(msCtr,msTgt,true));

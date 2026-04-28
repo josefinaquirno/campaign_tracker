@@ -1,0 +1,30 @@
+[
+  {
+    "id": "double_dates_0426",
+    "name": "DOUBLE DATES 20/4",
+    "start": "2026-04-20",
+    "end": "2026-05-05",
+    "status": "active",
+    "data_file": "data.json",
+    "oferta_file": "oferta.json",
+    "calidad_file": "calidad.json",
+    "container_groups": {
+      "MLA1587833": "FOCO", "MLA1593960": "FOCO", "MLA1587835": "FOCO",
+      "MLA1587824": "FOCO", "MLA1587826": "FOCO", "MLA1587827": "FOCO",
+      "MLA1587829": "FOCO", "MLA1587820": "FOCO", "MLA1593102": "FOCO",
+      "MLA1597617": "FOCO", "MLA1597616": "FOCO", "MLA1585322": "FOCO",
+      "MLA1587823": "FOCO", "MLA1587821": "FOCO",
+      "MLA1593114": "NO FOCO", "MLA1587855": "NO FOCO", "MLA1587853": "NO FOCO",
+      "MLA1587847": "NO FOCO", "MLA1587861": "NO FOCO", "MLA1587846": "NO FOCO",
+      "MLA1587850": "NO FOCO", "MLA1587836": "NO FOCO", "MLA1587845": "NO FOCO",
+      "MLA1587843": "NO FOCO", "MLA1587852": "NO FOCO", "MLA1587839": "NO FOCO",
+      "MLA1593998": "NO FOCO",
+      "MLA1594868": "TÁCTICO", "MLA1587867": "TÁCTICO", "MLA1594869": "TÁCTICO",
+      "MLA1587863": "TÁCTICO", "MLA1587857": "TÁCTICO"
+    },
+    "images": {
+      "celebrity": "MS_GENERAL_CELEBRITY_MKP_DEMAND_5_5_ABRIL_2026 .jpg",
+      "tachados": "MS_GENERAL_TACHADOS_MKP_DEMAND_5_5_ABRIL_2026.jpg"
+    }
+  }
+]

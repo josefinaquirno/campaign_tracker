@@ -1,13 +1,11 @@
 // ============================================================
 // Campaign Tracker — Apps Script
-// Fetches data.json + historical.json from GitHub and serves the dashboard.
+// Fetches campaign registry + data files from GitHub and serves the dashboard.
 // Deploy as: "Execute as: Me" + "Who has access: Anyone"
 // ============================================================
 
-var GITHUB_RAW_URL            = 'https://raw.githubusercontent.com/josefinaquirno/campaign_tracker/main/docs/data.json';
-var GITHUB_RAW_URL_HISTORICAL = 'https://raw.githubusercontent.com/josefinaquirno/campaign_tracker/main/docs/historical.json';
-var GITHUB_RAW_URL_CALIDAD    = 'https://raw.githubusercontent.com/josefinaquirno/campaign_tracker/main/docs/calidad.json';
-var GITHUB_RAW_URL_OFERTA     = 'https://raw.githubusercontent.com/josefinaquirno/campaign_tracker/main/docs/oferta.json';
+var GITHUB_RAW_BASE           = 'https://raw.githubusercontent.com/josefinaquirno/campaign_tracker/main/docs/';
+var GITHUB_RAW_URL_HISTORICAL = GITHUB_RAW_BASE + 'historical.json';
 
 function doGet() {
   return HtmlService
@@ -16,19 +14,26 @@ function doGet() {
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
-function getJsonData() {
+function getCampaigns() {
   try {
-    var response = UrlFetchApp.fetch(GITHUB_RAW_URL + '?v=' + Date.now());
+    var raw = UrlFetchApp.fetch(GITHUB_RAW_BASE + 'campaigns.json?v=' + Date.now()).getContentText();
+    return JSON.parse(raw);
+  } catch(e) { return []; }
+}
+
+function getJsonData(dataFile) {
+  try {
+    var url = GITHUB_RAW_BASE + (dataFile || 'data.json') + '?v=' + Date.now();
+    var response = UrlFetchApp.fetch(url);
     var raw = response.getContentText();
     var decoded = Utilities.newBlob(Utilities.base64Decode(JSON.parse(raw))).getDataAsString();
     var data = JSON.parse(decoded);
     data.historical = getHistoricalData();
     return data;
   } catch (e) {
-    // Fallback: try parsing as plain JSON (for local dev / data.json not base64-encoded)
     try {
-      var response2 = UrlFetchApp.fetch(GITHUB_RAW_URL + '?v=' + Date.now());
-      var data2 = JSON.parse(response2.getContentText());
+      var url2 = GITHUB_RAW_BASE + (dataFile || 'data.json') + '?v=' + Date.now();
+      var data2 = JSON.parse(UrlFetchApp.fetch(url2).getContentText());
       data2.historical = getHistoricalData();
       return data2;
     } catch (e2) {
@@ -43,25 +48,25 @@ function getJsonData() {
   }
 }
 
-function getCalidadData() {
+function getCalidadData(calidadFile, ofertaFile) {
   function decodeB64Json(raw) {
     try { return JSON.parse(Utilities.newBlob(Utilities.base64Decode(JSON.parse(raw))).getDataAsString()); }
     catch(e) { return JSON.parse(raw); }
   }
 
   try {
-    // Intentar primero el formato combinado (calidad.json con oferta + containers)
-    var calidadRaw = UrlFetchApp.fetch(GITHUB_RAW_URL_CALIDAD + '?v=' + Date.now()).getContentText();
+    var calidadUrl = GITHUB_RAW_BASE + (calidadFile || 'calidad.json') + '?v=' + Date.now();
+    var ofertaUrl  = GITHUB_RAW_BASE + (ofertaFile  || 'oferta.json')  + '?v=' + Date.now();
+
+    var calidadRaw = UrlFetchApp.fetch(calidadUrl).getContentText();
     var calidad = decodeB64Json(calidadRaw);
 
-    // Si calidad.json tiene oferta, es el formato combinado (viejo o transición)
     if (calidad.oferta && calidad.oferta.length > 0) {
       return calidad;
     }
 
-    // Si no, intentar el formato split: oferta.json separado
     try {
-      var ofertaRaw = UrlFetchApp.fetch(GITHUB_RAW_URL_OFERTA + '?v=' + Date.now()).getContentText();
+      var ofertaRaw = UrlFetchApp.fetch(ofertaUrl).getContentText();
       var oferta = decodeB64Json(ofertaRaw);
       return {
         oferta:       oferta.oferta      || [],
