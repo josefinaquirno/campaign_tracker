@@ -81,6 +81,19 @@ function getCalidadData(calidadFile, ofertaFile) {
   }
 }
 
+function getOptLandingData() {
+  function decodeB64Json(raw) {
+    try { return JSON.parse(Utilities.newBlob(Utilities.base64Decode(JSON.parse(raw))).getDataAsString()); }
+    catch(e) { return JSON.parse(raw); }
+  }
+  try {
+    var raw = UrlFetchApp.fetch(GITHUB_RAW_BASE + 'opt_landing.json?v=' + Date.now()).getContentText();
+    return decodeB64Json(raw);
+  } catch(e) {
+    return { opt_landing: [], refreshed_at: '' };
+  }
+}
+
 function getHistoricalData() {
   try {
     var response = UrlFetchApp.fetch(GITHUB_RAW_URL_HISTORICAL + '?v=' + Date.now());
