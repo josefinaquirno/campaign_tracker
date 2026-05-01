@@ -14,6 +14,6 @@ SELECT
 FROM meli-bi-data.WHOWNER.DM_LANDING_ATTRIBUTION_CONTAINER_DEAL
 WHERE DATE BETWEEN '2026-04-20' AND '2026-05-05'
   AND SITE = 'MLA'
-  AND landing_name = 'ofertas futboleras'
+  AND landing_name IN ('ofertas futboleras', '5 5 descuentos parcial')
 GROUP BY 1, 2
 ORDER BY 1 ASC
