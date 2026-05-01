@@ -1,5 +1,17 @@
 [
   {
+    "id": "hotsale_2025",
+    "name": "HOT SALE 2025",
+    "start": "2025-05-12",
+    "end": "2025-05-19",
+    "status": "closed",
+    "data_file": "data_hotsale_2025.json",
+    "oferta_file": null,
+    "calidad_file": null,
+    "container_groups": {},
+    "images": {}
+  },
+  {
     "id": "double_dates_0426",
     "name": "DOUBLE DATES 20/4",
     "start": "2026-04-20",
@@ -26,5 +38,17 @@
       "celebrity": "MS_GENERAL_CELEBRITY_MKP_DEMAND_5_5_ABRIL_2026 .jpg",
       "tachados": "MS_GENERAL_TACHADOS_MKP_DEMAND_5_5_ABRIL_2026.jpg"
     }
+  },
+  {
+    "id": "hotsale_2026",
+    "name": "HOT SALE 2026",
+    "start": "2026-05-11",
+    "end": "2026-05-18",
+    "status": "upcoming",
+    "data_file": "data.json",
+    "oferta_file": "oferta.json",
+    "calidad_file": "calidad.json",
+    "container_groups": {},
+    "images": {}
   }
 ]
