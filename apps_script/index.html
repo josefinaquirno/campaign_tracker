@@ -695,8 +695,10 @@ function computeNsiTarget(dates, byDate){
 }
 // NMV target = nsi_target * nasp
 function computeNmvTarget(nsiTarget){
-  var nasp = D.targets && D.targets.nasp;
-  return (nsiTarget != null && nasp != null) ? Math.round(nsiTarget * nasp) : null;
+  var raw = D.targets && D.targets.nasp;
+  // Handle case where nasp arrived as object {"nasp_val":"25.94"} due to BQ column ambiguity
+  var nasp = (raw != null && typeof raw === 'object') ? +(raw.nasp_val || raw.nasp || 0) : +raw;
+  return (nsiTarget != null && nasp > 0) ? Math.round(nsiTarget * nasp) : null;
 }
 // MS CTR target escalar según bucket activo
 function getMsCtrTarget(){
@@ -1403,7 +1405,7 @@ function renderContainer(){
     sessions:       tgtAccum(tgt.sessions,       tgtDates, dates),
     nmv:            nmvTgt,
     cvr:            tgtAvg(tgt.cvr,              tgtDates, dates),
-    nasp:           D.targets && D.targets.nasp,
+    nasp:           (function(){ var r=D.targets&&D.targets.nasp; if(r&&typeof r==='object') r=r.nasp_val||r.nasp; return r!=null?+r:null; })(),
     nsi:            nsiTgt,
     transactions:   tgtAccum(tgt.transacciones||tgt.transactions, tgtDates, dates),
     users_vip:      tgtAccum(tgt.ses_vip||tgt.users_vip, tgtDates, dates),
