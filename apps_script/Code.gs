@@ -21,30 +21,31 @@ function getCampaigns() {
   } catch(e) { return []; }
 }
 
-function getJsonData(dataFile) {
+function getJsonData(dataFile, targetsFile) {
+  function decodeB64Json(raw) {
+    try { return JSON.parse(Utilities.newBlob(Utilities.base64Decode(JSON.parse(raw))).getDataAsString()); }
+    catch(e) { return JSON.parse(raw); }
+  }
   try {
     var url = GITHUB_RAW_BASE + (dataFile || 'data.json') + '?v=' + Date.now();
-    var response = UrlFetchApp.fetch(url);
-    var raw = response.getContentText();
-    var decoded = Utilities.newBlob(Utilities.base64Decode(JSON.parse(raw))).getDataAsString();
-    var data = JSON.parse(decoded);
+    var data = decodeB64Json(UrlFetchApp.fetch(url).getContentText());
     data.historical = getHistoricalData();
+    // Merge dynamic targets (targets.json overrides embedded targets in data.json)
+    try {
+      var tf = targetsFile || 'targets.json';
+      var tRaw = UrlFetchApp.fetch(GITHUB_RAW_BASE + tf + '?v=' + Date.now()).getContentText();
+      var tgt = decodeB64Json(tRaw);
+      if (tgt && tgt.dates && tgt.dates.length > 0) { data.targets = tgt; }
+    } catch(et) { /* keep embedded targets if targets.json unavailable */ }
     return data;
   } catch (e) {
-    try {
-      var url2 = GITHUB_RAW_BASE + (dataFile || 'data.json') + '?v=' + Date.now();
-      var data2 = JSON.parse(UrlFetchApp.fetch(url2).getContentText());
-      data2.historical = getHistoricalData();
-      return data2;
-    } catch (e2) {
-      return {
-        campaign: { name: '—', start: '—', end: '—' },
-        ms: [], landing: [], container: [],
-        total_containers: [], total_site: [], historical: [],
-        targets: { ms: {}, landing: {}, container: {} },
-        refreshed_at: 'error: ' + e.message
-      };
-    }
+    return {
+      campaign: { name: '—', start: '—', end: '—' },
+      ms: [], landing: [], container: [],
+      total_containers: [], total_site: [], historical: [],
+      targets: { ms: {}, landing: {}, container: {} },
+      refreshed_at: 'error: ' + e.message
+    };
   }
 }
 

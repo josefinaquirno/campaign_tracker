@@ -5,9 +5,12 @@
     "start": "2025-05-12",
     "end": "2025-05-19",
     "status": "closed",
+    "campaign_type": "T1",
     "data_file": "data_hotsale_2025.json",
+    "targets_file": null,
     "oferta_file": null,
     "calidad_file": null,
+    "to_dates": [],
     "container_groups": {},
     "images": {}
   },
@@ -17,9 +20,12 @@
     "start": "2026-04-20",
     "end": "2026-05-05",
     "status": "active",
+    "campaign_type": "T2",
     "data_file": "data.json",
+    "targets_file": "targets.json",
     "oferta_file": "oferta.json",
     "calidad_file": "calidad.json",
+    "to_dates": ["2026-04-27", "2026-05-05"],
     "container_groups": {
       "MLA1587833": "FOCO", "MLA1593960": "FOCO", "MLA1587835": "FOCO",
       "MLA1587824": "FOCO", "MLA1587826": "FOCO", "MLA1587827": "FOCO",
@@ -45,9 +51,12 @@
     "start": "2026-05-11",
     "end": "2026-05-18",
     "status": "upcoming",
+    "campaign_type": "T1",
     "data_file": "data.json",
+    "targets_file": "targets.json",
     "oferta_file": "oferta.json",
     "calidad_file": "calidad.json",
+    "to_dates": [],
     "container_groups": {},
     "images": {}
   }

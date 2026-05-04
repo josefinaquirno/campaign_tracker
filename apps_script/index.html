@@ -471,14 +471,15 @@ var PALETTE=['#FFE600','#1a1a2e','#4caf50','#2196F3','#FF9800','#9C27B0','#00BCD
 // LOAD
 // ──────────────────────────────────────────────
 function _loadCampaignData(camp){
-  var df = camp ? camp.data_file   : 'data.json';
-  var cf = camp ? camp.calidad_file: 'calidad.json';
-  var of = camp ? camp.oferta_file : 'oferta.json';
+  var df = camp ? camp.data_file    : 'data.json';
+  var tf = camp ? camp.targets_file : 'targets.json';
+  var cf = camp ? camp.calidad_file : 'calidad.json';
+  var of = camp ? camp.oferta_file  : 'oferta.json';
   if(typeof google!=='undefined'&&google.script){
     google.script.run
       .withSuccessHandler(function(d){init(d);})
       .withFailureHandler(function(e){document.getElementById('loading').textContent='Error: '+e.message;})
-      .getJsonData(df);
+      .getJsonData(df, tf);
     google.script.run
       .withSuccessHandler(function(c){initCalidad(c);})
       .withFailureHandler(function(){})
