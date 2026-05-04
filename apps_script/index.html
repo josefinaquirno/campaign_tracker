@@ -703,7 +703,11 @@ function getMsCtrTarget(){
   var ms = D.targets && D.targets.ms;
   if(!ms) return null;
   var map = { 'ALL':'ctr_all', 'PRINCIPAL':'ctr_principal', 'HIGH':'ctr_high', 'MID':'ctr_mid' };
-  return ms[map[MS_BUCKET] || 'ctr_all'] || ms.ctr || null; // fallback a formato viejo
+  var key = map[MS_BUCKET] || 'ctr_all';
+  var v = ms[key];
+  if(v != null && +v > 0) return +v;  // convert string→number, reject 0
+  var old = ms.ctr;  // fallback a formato viejo (array)
+  return old != null ? old : null;
 }
 
 // ──────────────────────────────────────────────
@@ -753,7 +757,7 @@ function renderSummary(){
   // Build OP data arrays
   var OP={
     ms_ctr:       dayV(function(d){var b=msByDate[d];return b&&b.ap>0?b.ac/b.ap:null;}),
-    ms_ctr_tgt:   CAMP_DATES.map(function(){ return (D.targets&&D.targets.ms&&D.targets.ms.ctr_principal)||tgtMS.ctr||null; }),
+    ms_ctr_tgt:   CAMP_DATES.map(function(){ var v=D.targets&&D.targets.ms&&D.targets.ms.ctr_principal; return (v!=null&&+v>0)?+v:(tgtMS.ctr||null); }),
     celebrity_ctr:dayV(function(d){var b=msByDate[d];return b&&b.cp>0?b.cc/b.cp:null;}),
     tachados_ctr: dayV(function(d){var b=msByDate[d];return b&&b.tp>0?b.tc/b.tp:null;}),
     landing_ses:     dayV(function(d){var b=ldgByDate[d];return b?b.ses:null;}),
