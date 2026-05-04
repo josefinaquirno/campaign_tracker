@@ -215,6 +215,13 @@
 <div id="camp-bar" style="background:#fff;border-bottom:1px solid #eee;padding:6px 24px;display:flex;align-items:center;gap:10px;">
   <span style="font-size:11px;color:#888;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Campaña:</span>
   <div id="camp-pills" style="display:flex;gap:6px;flex-wrap:wrap;"><span style="font-size:11px;color:#bbb">Cargando...</span></div>
+  <div id="to-toggle-wrap" style="margin-left:auto;display:flex;align-items:center;gap:6px;display:none;">
+    <span style="font-size:11px;color:#888;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Días TakeOver:</span>
+    <div style="display:flex;gap:4px;">
+      <button class="pill active" id="to-btn-all" onclick="setToFilter('ALL',this)">Con TO</button>
+      <button class="pill" id="to-btn-noto" onclick="setToFilter('NO_TO',this)">Sin TO</button>
+    </div>
+  </div>
 </div>
 
 <!-- TABS NAV -->
@@ -446,6 +453,7 @@ var CAL_CONTAINER_GROUPS = {};
 var OPT = { opt_landing: [], refreshed_at: '' };
 var OPT_LDG_FILTER = 'ALL';
 var OPT_GROUP_FILTER = 'TODOS';
+var TO_FILTER = 'ALL'; // 'ALL' | 'NO_TO'
 // Multi-campaign state
 var CAMPAIGNS = [];
 var ACTIVE_CAMPAIGN = null;
@@ -583,6 +591,7 @@ function init(d){
 
   buildLdgToggles();
   buildCmpBar();
+  buildToToggle();
   renderAll();
 }
 
@@ -643,6 +652,60 @@ function tgtLine(arr, tgtDates, dataDates){
 }
 function tgtDS(data){ return {label:'Target',data:data,borderColor:'#aaa',borderDash:[6,4],backgroundColor:'transparent',tension:.3,pointRadius:2,borderWidth:1.5,fill:false}; }
 
+// ── TO Filter ──────────────────────────────────
+function setToFilter(v, btn){
+  TO_FILTER = v;
+  document.querySelectorAll('#to-toggle-wrap .pill').forEach(function(b){b.classList.remove('active');});
+  btn.classList.add('active');
+  renderAll();
+}
+function buildToToggle(){
+  var wrap = document.getElementById('to-toggle-wrap');
+  if(!wrap) return;
+  var toDates = (D.targets && D.targets.to_dates) || [];
+  wrap.style.display = toDates.length ? 'flex' : 'none';
+  // Reset if no TO dates
+  if(!toDates.length){ TO_FILTER = 'ALL'; }
+}
+// Devuelve solo fechas no-TO cuando TO_FILTER = 'NO_TO'
+function activeDates(dates){
+  if(TO_FILTER === 'ALL') return dates;
+  var toSet = {};
+  ((D.targets && D.targets.to_dates) || []).forEach(function(d){ toSet[d] = 1; });
+  return dates.filter(function(d){ return !toSet[d]; });
+}
+
+// ── Dynamic container targets ──────────────────
+// NSI target: trx_real_dia * (bench_trx / bench_nsi) sumado por días con datos
+function computeNsiTarget(dates, byDate){
+  var tgt = D.targets || {};
+  var bTrx = (tgt.container && tgt.container.transacciones) || [];
+  var bNsi = (tgt.container && tgt.container.nsi) || [];
+  var tDates = tgt.dates || [];
+  if(!bTrx.length || !bNsi.length) return null;
+  var sum = 0, found = false;
+  dates.forEach(function(d){
+    var i = tDates.indexOf(d);
+    if(i >= 0 && bTrx[i] > 0 && bNsi[i] > 0 && byDate[d]){
+      sum += (byDate[d].transactions || 0) * (bTrx[i] / bNsi[i]);
+      found = true;
+    }
+  });
+  return found ? Math.round(sum) : null;
+}
+// NMV target = nsi_target * nasp
+function computeNmvTarget(nsiTarget){
+  var nasp = D.targets && D.targets.nasp;
+  return (nsiTarget != null && nasp != null) ? Math.round(nsiTarget * nasp) : null;
+}
+// MS CTR target escalar según bucket activo
+function getMsCtrTarget(){
+  var ms = D.targets && D.targets.ms;
+  if(!ms) return null;
+  var map = { 'ALL':'ctr_all', 'PRINCIPAL':'ctr_principal', 'HIGH':'ctr_high', 'MID':'ctr_mid' };
+  return ms[map[MS_BUCKET] || 'ctr_all'] || ms.ctr || null; // fallback a formato viejo
+}
+
 // ──────────────────────────────────────────────
 // SUMMARY — ONE PAGER
 // ──────────────────────────────────────────────
@@ -690,7 +753,7 @@ function renderSummary(){
   // Build OP data arrays
   var OP={
     ms_ctr:       dayV(function(d){var b=msByDate[d];return b&&b.ap>0?b.ac/b.ap:null;}),
-    ms_ctr_tgt:   tgtArr(tgtMS.ctr),
+    ms_ctr_tgt:   CAMP_DATES.map(function(){ return (D.targets&&D.targets.ms&&D.targets.ms.ctr_principal)||tgtMS.ctr||null; }),
     celebrity_ctr:dayV(function(d){var b=msByDate[d];return b&&b.cp>0?b.cc/b.cp:null;}),
     tachados_ctr: dayV(function(d){var b=msByDate[d];return b&&b.tp>0?b.tc/b.tp:null;}),
     landing_ses:     dayV(function(d){var b=ldgByDate[d];return b?b.ses:null;}),
@@ -930,6 +993,7 @@ function renderMS(){
   document.getElementById('ms-badge-period').textContent = 'hasta '+fDate(lastDate);
 
   var tgt = (D.targets&&D.targets.ms)||{};
+  var msCtrTarget = getMsCtrTarget(); // escalar dinámico por bucket
 
   // Historical comparison totals
   var histTot={clicks:0,prints:0,ctr:0}, histNameMS='';
@@ -962,19 +1026,19 @@ function renderMS(){
 
   // KPIs
   var kpiCfg = [
-    {lbl:'CTR',             val:fPct(tot.ctr,2),     sub:'Clicks / Prints', tgtKey:'ctr', raw:tot.ctr, hCur:tot.ctr, hRef:histTot.ctr},
-    {lbl:'CTR SEGMENTADO',  val:ctrSeg!=null?fPct(ctrSeg,2):'—',             sub:'Clicks / Prints (seg.)', tgtKey:null},
-    {lbl:'% PRINTS SEG.',   val:pctPrintsSeg!=null?fPct(pctPrintsSeg,2):'—', sub:'Prints segmentados / total', tgtKey:null},
-    {lbl:'% MS SEGMENTADOS',val:pctLISeg!=null?fPct(pctLISeg,2):'—',         sub:segLIs+' de '+totalLIs+' line items', tgtKey:null},
-    {lbl:'CREATIVOS',       val:fNum(totalLIs),                               sub:'Line items en campaña', tgtKey:null}
+    {lbl:'CTR',             val:fPct(tot.ctr,2),     sub:'Clicks / Prints', tgtVal:msCtrTarget, raw:tot.ctr, hCur:tot.ctr, hRef:histTot.ctr},
+    {lbl:'CTR SEGMENTADO',  val:ctrSeg!=null?fPct(ctrSeg,2):'—',             sub:'Clicks / Prints (seg.)', tgtVal:null},
+    {lbl:'% PRINTS SEG.',   val:pctPrintsSeg!=null?fPct(pctPrintsSeg,2):'—', sub:'Prints segmentados / total', tgtVal:null},
+    {lbl:'% MS SEGMENTADOS',val:pctLISeg!=null?fPct(pctLISeg,2):'—',         sub:segLIs+' de '+totalLIs+' line items', tgtVal:null},
+    {lbl:'CREATIVOS',       val:fNum(totalLIs),                               sub:'Line items en campaña', tgtVal:null}
   ];
   document.getElementById('ms-kpis').innerHTML = kpiCfg.map(function(k){
     var tgtStr='', cls='';
-    if(k.tgtKey&&tgt[k.tgtKey]!=null&&k.raw!=null){
-      var pct=(k.raw-tgt[k.tgtKey])/tgt[k.tgtKey]*100;
+    if(k.tgtVal!=null&&k.raw!=null){
+      var pct=(k.raw-k.tgtVal)/k.tgtVal*100;
       cls = pct>=0?'vs-target-ok':pct>=-10?'vs-target-warn':'vs-target-bad';
       var tClass = pct>=0?'ok':pct>=-10?'warn':'bad';
-      tgtStr = '<div class="kpi-target '+tClass+'">'+(pct>=0?'▲ ':'▼ ')+Math.abs(pct).toFixed(1)+'% vs target '+fPct(tgt[k.tgtKey],2)+'</div>';
+      tgtStr = '<div class="kpi-target '+tClass+'">'+(pct>=0?'▲ ':'▼ ')+Math.abs(pct).toFixed(1)+'% vs BAU '+fPct(k.tgtVal,2)+'</div>';
     }
     return '<div class="kpi-card '+cls+'"><div class="kpi-label">'+k.lbl+'</div><div class="kpi-val">'+k.val+'</div><div class="kpi-sub">'+k.sub+'</div>'+tgtStr+histDelta(k.hCur,k.hRef)+'</div>';
   }).join('');
@@ -1113,7 +1177,7 @@ function renderLanding(){
     b.sessions+=+r.sessions||0; b.nmv+=+r.nmv||0; b.orders+=+r.orders||0; b.transactions+=+r.transactions||0;
     b.nsi+=+r.nsi||0; b.buyers+=+r.buyers||0;
   });
-  var dates = Object.keys(byDate).sort();
+  var dates = activeDates(Object.keys(byDate).sort());
   var tot = dates.reduce(function(a,d){ var b=byDate[d];
     a.sessions+=b.sessions; a.nmv+=b.nmv; a.orders+=b.orders; a.transactions+=b.transactions;
     a.nsi+=b.nsi; a.buyers+=b.buyers; return a;
@@ -1298,7 +1362,7 @@ function renderContainer(){
     b.sessions+=+r.sessions||0; b.nmv+=+r.nmv||0; b.orders+=+r.orders||0; b.transactions+=+r.transactions||0;
     b.nsi+=+r.nsi||0; b.users_container+=+r.users_container||0; b.users_vip+=+r.users_vip||0; b.buyers+=+r.buyers||0;
   });
-  var dates=Object.keys(byDate).sort();
+  var dates=activeDates(Object.keys(byDate).sort());
   var tot=dates.reduce(function(a,d){var b=byDate[d];
     a.sessions+=b.sessions;a.nmv+=b.nmv;a.orders+=b.orders;a.transactions+=b.transactions;
     a.nsi+=b.nsi;a.users_container+=b.users_container;a.users_vip+=b.users_vip;a.buyers+=b.buyers;return a;
@@ -1328,14 +1392,17 @@ function renderContainer(){
 
   var tgt=(D.targets&&D.targets.container)||{};
   var tgtDates=(D.targets&&D.targets.dates)||[];
+  // NSI y NMV targets dinámicos
+  var nsiTgt  = computeNsiTarget(dates, byDate);
+  var nmvTgt  = computeNmvTarget(nsiTgt);
   var tgtVal={
     sessions:       tgtAccum(tgt.sessions,       tgtDates, dates),
-    nmv:            tgtAccum(tgt.nmv,            tgtDates, dates),
+    nmv:            nmvTgt,
     cvr:            tgtAvg(tgt.cvr,              tgtDates, dates),
-    nasp:           tgtAvg(tgt.nasp,             tgtDates, dates),
-    nsi:            tgtAccum(tgt.nsi,            tgtDates, dates),
-    transactions:   tgtAccum(tgt.transactions,   tgtDates, dates),
-    users_vip:      tgtAccum(tgt.users_vip,      tgtDates, dates),
+    nasp:           D.targets && D.targets.nasp,
+    nsi:            nsiTgt,
+    transactions:   tgtAccum(tgt.transacciones||tgt.transactions, tgtDates, dates),
+    users_vip:      tgtAccum(tgt.ses_vip||tgt.users_vip, tgtDates, dates),
     share_sessions: tgtAvg(tgt.share_sessions,   tgtDates, dates),
     share_nmv:      tgtAvg(tgt.share_nmv,        tgtDates, dates)
   };
