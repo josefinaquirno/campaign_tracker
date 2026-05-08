@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Campaign Tracker — MLA</title>
+  <title>Campaign Tracker 2026 — SiteMerch MLA</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
@@ -199,7 +199,7 @@
 <!-- HEADER -->
 <div class="header">
   <div class="header-title">
-    <h1 id="hdr-name">Campaign Tracker</h1>
+    <h1 id="hdr-name">Campaign Tracker 2026 — SiteMerch MLA</h1>
     <p>MercadoLibre Argentina · Seguimiento diario de campaña comercial</p>
   </div>
   <div class="header-right">
@@ -459,6 +459,7 @@ var CAMPAIGNS = [];
 var ACTIVE_CAMPAIGN = null;
 var COMP_D = null;
 var COMP_CAMPAIGN = null;
+var COMP_C_KPIS = null;  // {riu_high, con_oferta, dto_pond} for comparison campaign calidad
 var CH = {};
 var ACTIVE_TAB = 'summary';
 var LDG_FILTER = 'ALL';
@@ -557,8 +558,66 @@ function buildCampaignSelector(){
   }).join('');
 }
 
+function computeCalKpis(c){
+  if(!c||(c.oferta||[]).length===0) return null;
+  var agg={};
+  (c.oferta||[]).forEach(function(r){
+    Object.keys(r).forEach(function(k){
+      if(k==='DISCOUNT_POND') agg[k]=r[k];
+      else if(k!=='PATTERN') agg[k]=(agg[k]||0)+(+r[k]||0);
+    });
+  });
+  var totV=agg.VIEWED_ITEMS||0;
+  return {
+    riu_high:  totV>0?(agg.HIGH_ITEMS_V||0)/totV*100:null,
+    con_oferta:totV>0?(totV-(agg.NO_OFFER_ITEMS||0))/totV*100:null,
+    dto_pond:  agg.DISCOUNT_POND!=null?Math.abs(agg.DISCOUNT_POND)*100:null
+  };
+}
+
 function initCalidad(c){
   C = c;
+  var _finDbg=(C.oferta||[]).reduce(function(s,r){return s+(+r.NO_OFFER_FIN_BY_MELI||0);},0);
+  console.log('[initCalidad] oferta:'+(C.oferta||[]).length+' FIN_BY_MELI:'+_finDbg+' tab:'+ACTIVE_TAB);
+
+  // Recalcular las partes de calidad en window.OP_DATA sin re-renderizar todo el Summary
+  // (re-render de charts causa side-effects; basta con actualizar los datos y el funnel activo)
+  if(window.OP_DATA){
+    var _cAgg={};
+    (C.oferta||[]).forEach(function(r){Object.keys(r).forEach(function(k){if(k!=='PATTERN'&&k!=='DISCOUNT_POND')_cAgg[k]=(_cAgg[k]||0)+(+r[k]||0);else if(k==='DISCOUNT_POND')_cAgg[k]=r[k];});});
+    var _cV=_cAgg.VIEWED_ITEMS||0,_cE=_cAgg.ITEMS_EXHIBIDOS||0,_cG=_cAgg.GMV_ITEMS||0;
+    var _noE=_cE-(_cAgg.REAL_OFFER_E||0),_noV=_cAgg.NO_OFFER_ITEMS||0,_noG=_cAgg.NO_OFFER_GMV_ITEMS||0;
+    var _finE=_cAgg.NO_OFFER_FIN_BY_MELI_E||0,_fin=_cAgg.NO_OFFER_FIN_BY_MELI||0,_finG=_cAgg.NO_OFFER_FIN_BY_MELI_GMV||0;
+    var _cofE=_cAgg.OFFER_COFINANCED_E||0,_cofV=_cAgg.OFFER_COFINANCED_V||0,_cofG=_cAgg.OFFER_COFINANCED_GMV||0;
+    var _selE=Math.max(0,(_cAgg.REAL_OFFER_E||0)-_cofE);
+    var _selV=Math.max(0,_cV-_noV-_cofV);
+    var _selG=Math.max(0,_cG-_noG-_cofG);
+    window.OP_DATA.calidad_riu_high   = _cV>0?(_cAgg.HIGH_ITEMS_V||0)/_cV*100:null;
+    window.OP_DATA.calidad_con_oferta = _cV>0?(_cV-(_cAgg.NO_OFFER_ITEMS||0))/_cV*100:null;
+    window.OP_DATA.calidad_dto_pond   = _cAgg.DISCOUNT_POND!=null?Math.abs(_cAgg.DISCOUNT_POND)*100:null;
+    window.OP_DATA.calidad_funnel_steps=[{paso:'Exhibidos',items:_cE},{paso:'Visitados',items:_cV},{paso:'Vendidos',items:_cG}];
+    window.OP_DATA.calidad_funnel_fin=[
+      {categoria:'Cofinanciado ML',exhibidos:_cofE,visitados:_cofV,vendidos:_cofG},
+      {categoria:'100% Seller',exhibidos:_selE,visitados:_selV,vendidos:_selG},
+      {categoria:'Sin Oferta',exhibidos:_noE,visitados:_noV,vendidos:_noG},
+      {categoria:'↳ Financing by Meli',exhibidos:_finE,visitados:_fin,vendidos:_finG,isSubrow:true,pctOfParent:_noV>0?_fin/_noV*100:0}
+    ].map(function(r){r.pct_visita=r.exhibidos>0?r.visitados/r.exhibidos*100:0;r.pct_conv=r.visitados>0?r.vendidos/r.visitados*100:0;return r;});
+    window.OP_DATA.calidad_funnel_oferta=[
+      {categoria:'Pre-negociada',E:'OFFER_PRENEGOTIATED_E',V:'OFFER_PRENEGOTIATED_V',G:'OFFER_PRENEGOTIATED_GMV'},
+      {categoria:'Tiers',E:'OFFER_TIERS_E',V:'OFFER_TIERS_V',G:'OFFER_TIERS_GMV'},
+      {categoria:'Smart',E:'OFFER_SMART_E',V:'OFFER_SMART_V',G:'OFFER_SMART_GMV'},
+      {categoria:'Custom',E:'OFFER_CUSTOM_E',V:'OFFER_CUSTOM_V',G:'OFFER_CUSTOM_GMV'},
+      {categoria:'DOD',E:'OFFER_DOD_E',V:'OFFER_DOD_V',G:'OFFER_DOD_GMV'},
+      {categoria:'Lightning',E:'OFFER_LIGHTNING_E',V:'OFFER_LIGHTNING_V',G:'OFFER_LIGHTNING_GMV'},
+      {categoria:'Otros',E:'OFFER_OTHERS_E',V:'OFFER_OTHERS_V',G:'OFFER_OTHERS_GMV'}
+    ].map(function(t){var e=_cAgg[t.E]||0,v=_cAgg[t.V]||0,g=_cAgg[t.G]||0;return {categoria:t.categoria,exhibidos:e,visitados:v,vendidos:g,pct_visita:e>0?v/e*100:0,pct_conv:v>0?g/v*100:0};}).filter(function(r){return r.exhibidos>0||r.visitados>0;});
+    // Actualizar KPI cards de calidad y re-renderizar el funnel activo
+    if(ACTIVE_TAB==='summary'){
+      opKPIs();
+      var _ab=document.querySelector('.op-fbtn.active');
+      if(_ab) opFunnel(_ab.getAttribute('data-opv'));
+    }
+  }
   if(ACTIVE_TAB==='calidad-oferta')     renderCalidadOferta();
   if(ACTIVE_TAB==='calidad-containers') renderCalidadContainers();
 }
@@ -574,7 +633,7 @@ function init(d){
 
   // Header
   var camp = D.campaign||{};
-  document.getElementById('hdr-name').textContent = 'Campaign Tracker — '+(camp.name||'—');
+  document.getElementById('hdr-name').textContent = 'Campaign Tracker 2026 — SiteMerch MLA'+(camp.name?' · '+camp.name:'');
   document.getElementById('hdr-period').textContent = (camp.start||'—')+' → '+(camp.end||'—');
   if(D.refreshed_at) document.getElementById('hdr-updated').textContent = D.refreshed_at.substring(0,16).replace('T',' ');
 
@@ -657,7 +716,44 @@ function setToFilter(v, btn){
   TO_FILTER = v;
   document.querySelectorAll('#to-toggle-wrap .pill').forEach(function(b){b.classList.remove('active');});
   btn.classList.add('active');
-  renderAll();
+  if(ACTIVE_TAB==='summary'){
+    // Para Summary: no destruir/recrear los charts.
+    // 1) Recalcular índices TO
+    var _toIdxSet={};
+    if(TO_FILTER==='NO_TO'){
+      var _cd=window.OP_CAMP_DATES||[], _td=((D.targets&&D.targets.to_dates)||[]);
+      _cd.forEach(function(d,i){if(_td.indexOf(d)>=0)_toIdxSet[i]=1;});
+    }
+    window.OP_TO_IDX_SET=_toIdxSet;
+    // 2) Actualizar KPI cards (números)
+    opKPIs();
+    // 3) Actualizar charts via chart.update() sin tocar el DOM
+    _updateSummaryCharts(_toIdxSet);
+  } else {
+    renderAll();
+  }
+}
+// Actualiza labels y datos de los charts del Summary para el filtro TO activo.
+// toIdxSet = {} → muestra todos los días; con índices → filtra los días TO.
+function _updateSummaryCharts(toIdxSet){
+  var OP=window.OP_DATA, DL=window.OP_DAY_LABELS;
+  if(!OP||!DL) return;
+  function filt(arr){return (arr||[]).filter(function(_,i){return !toIdxSet[i];});}
+  var labels=filt(DL);
+  if(CH['op-ldg']&&CH['op-ldg'].data){
+    CH['op-ldg'].data.labels=labels;
+    CH['op-ldg'].data.datasets[0].data=filt(OP.landing_ses);
+    CH['op-ldg'].data.datasets[1].data=filt(OP.landing_ses_tgt);
+    CH['op-ldg'].data.datasets[2].data=filt(OP.landing_share);
+    CH['op-ldg'].update('none');
+  }
+  if(CH['op-cnt']&&CH['op-cnt'].data){
+    CH['op-cnt'].data.labels=labels;
+    CH['op-cnt'].data.datasets[0].data=filt(OP.cont_nmv);
+    CH['op-cnt'].data.datasets[1].data=filt(OP.cont_nmv_tgt);
+    CH['op-cnt'].data.datasets[2].data=filt(OP.cont_cvr);
+    CH['op-cnt'].update('none');
+  }
 }
 function buildToToggle(){
   var wrap = document.getElementById('to-toggle-wrap');
@@ -755,6 +851,13 @@ function renderSummary(){
 
   function tgtArr(arr){return CAMP_DATES.map(function(d){var i=tgtDates.indexOf(d);return arr&&i>=0?arr[i]:null;});}
   function dayV(fn){return CAMP_DATES.map(fn);}
+  // Pre-compute set of CAMP_DATES indices that are TO dates → opAvg/opSum los saltan
+  var _toIdxSet={};
+  if(TO_FILTER==='NO_TO'){
+    var _toDates=((D.targets&&D.targets.to_dates)||[]);
+    CAMP_DATES.forEach(function(d,i){if(_toDates.indexOf(d)>=0)_toIdxSet[i]=1;});
+  }
+  window.OP_TO_IDX_SET=_toIdxSet;
 
   // Build OP data arrays
   var OP={
@@ -790,10 +893,20 @@ function renderSummary(){
   OP.calidad_dto_pond=calAgg.DISCOUNT_POND!=null?Math.abs(calAgg.DISCOUNT_POND)*100:null;
   OP.calidad_funnel_steps=[{paso:'Exhibidos',items:calTotE},{paso:'Visitados',items:calTotV},{paso:'Vendidos',items:calTotG}];
   var noE=calTotE-(calAgg.REAL_OFFER_E||0), noV=calAgg.NO_OFFER_ITEMS||0, noG=calAgg.NO_OFFER_GMV_ITEMS||0;
+  var finByMeliE=calAgg.NO_OFFER_FIN_BY_MELI_E||0, finByMeliV=calAgg.NO_OFFER_FIN_BY_MELI||0, finByMeliG=calAgg.NO_OFFER_FIN_BY_MELI_GMV||0;
+  // Categorías exclusivas: el mismo ítem puede tener oferta en distintos días,
+  // lo que lo cuenta en varias categorías en el SQL. Se corrige asignando
+  // Cofinanciadas primero, luego "100% Seller = total_con_oferta - Cofinanciadas",
+  // garantizando que la suma siempre iguale el total.
+  var cofE=calAgg.OFFER_COFINANCED_E||0, cofV=calAgg.OFFER_COFINANCED_V||0, cofG=calAgg.OFFER_COFINANCED_GMV||0;
+  var selE=Math.max(0,(calAgg.REAL_OFFER_E||0)-cofE);
+  var selV=Math.max(0,calTotV-noV-cofV);
+  var selG=Math.max(0,calTotG-noG-cofG);
   OP.calidad_funnel_fin=[
-    {categoria:'Cofinanciado ML',exhibidos:calAgg.OFFER_COFINANCED_E||0,visitados:calAgg.OFFER_COFINANCED_V||0,vendidos:calAgg.OFFER_COFINANCED_GMV||0},
-    {categoria:'100% Seller',exhibidos:calAgg.OFFER_SELLER_E||0,visitados:calAgg.OFFER_SELLER_V||0,vendidos:calAgg.OFFER_SELLER_GMV||0},
-    {categoria:'Sin Oferta',exhibidos:noE,visitados:noV,vendidos:noG}
+    {categoria:'Cofinanciado ML',exhibidos:cofE,visitados:cofV,vendidos:cofG},
+    {categoria:'100% Seller',exhibidos:selE,visitados:selV,vendidos:selG},
+    {categoria:'Sin Oferta',exhibidos:noE,visitados:noV,vendidos:noG},
+    {categoria:'↳ Financing by Meli',exhibidos:finByMeliE,visitados:finByMeliV,vendidos:finByMeliG,isSubrow:true,pctOfParent:noV>0?finByMeliV/noV*100:0}
   ].map(function(r){r.pct_visita=r.exhibidos>0?r.visitados/r.exhibidos*100:0;r.pct_conv=r.visitados>0?r.vendidos/r.visitados*100:0;return r;});
   OP.calidad_funnel_oferta=[
     {categoria:'Pre-negociada',E:'OFFER_PRENEGOTIATED_E',V:'OFFER_PRENEGOTIATED_V',G:'OFFER_PRENEGOTIATED_GMV'},
@@ -805,7 +918,7 @@ function renderSummary(){
     {categoria:'Otros',E:'OFFER_OTHERS_E',V:'OFFER_OTHERS_V',G:'OFFER_OTHERS_GMV'}
   ].map(function(t){var e=calAgg[t.E]||0,v=calAgg[t.V]||0,g=calAgg[t.G]||0;return {categoria:t.categoria,exhibidos:e,visitados:v,vendidos:g,pct_visita:e>0?v/e*100:0,pct_conv:v>0?g/v*100:0};}).filter(function(r){return r.exhibidos>0||r.visitados>0;});
   function shortCN(name){return (name||'').replace(/MKP\s+DEMAND\s+\d+\s+\d+\s+\w+\s+\d+\s*/i,'').trim()||name;}
-  OP.calidad_funnel_containers=(C.containers||[]).map(function(r){var e=+r.ITEMS_EXHIBIDOS||0,no=+r.NO_OFFER_ITEMS||0;return {container:shortCN(r.CONTAINER_NAME),exhibidos:e,sin_oferta:no,pct_sin_oferta:e>0?no/e*100:0};}).sort(function(a,b){return b.sin_oferta-a.sin_oferta;});
+  OP.calidad_funnel_containers=(C.containers||[]).map(function(r){var e=+r.ITEMS_EXHIBIDOS||0,no=+r.NO_OFFER_ITEMS||0,fin=+r.NO_OFFER_FIN_BY_MELI||0;return {container:shortCN(r.CONTAINER_NAME),exhibidos:e,sin_oferta:no,pct_sin_oferta:e>0?no/e*100:0,fin_by_meli:fin};}).sort(function(a,b){return b.sin_oferta-a.sin_oferta;});
   var totNMV=(C.containers||[]).reduce(function(s,r){return s+(+r.GMV_LC_168HS_TOTAL||0);},0);
   OP.top_cont_nmv=(C.containers||[]).slice().sort(function(a,b){return (+b.GMV_LC_168HS_TOTAL||0)-(+a.GMV_LC_168HS_TOTAL||0);}).slice(0,5).map(function(r){var nmv=+r.GMV_LC_168HS_TOTAL||0,ses=+r.UNIQUE_SESSION||0,trx=+r.TRANSACTIONS_24HS||0;return {container:shortCN(r.CONTAINER_NAME),nmv:nmv,sessions:ses,orders:trx,nmv_share:totNMV>0?nmv/totNMV*100:0,cvr:ses>0?trx/ses*100:0};});
   OP.top_cont_cvr=(C.containers||[]).filter(function(r){return (+r.UNIQUE_SESSION||0)>50;}).slice().sort(function(a,b){return (+b.TRANSACTIONS_24HS||0)/(+b.UNIQUE_SESSION||1)-(+a.TRANSACTIONS_24HS||0)/(+a.UNIQUE_SESSION||1);}).slice(0,5).map(function(r){var nmv=+r.GMV_LC_168HS_TOTAL||0,ses=+r.UNIQUE_SESSION||0,trx=+r.TRANSACTIONS_24HS||0;return {container:shortCN(r.CONTAINER_NAME),nmv:nmv,sessions:ses,orders:trx,nmv_share:totNMV>0?nmv/totNMV*100:0,cvr:ses>0?trx/ses*100:0};});
@@ -858,7 +971,7 @@ function renderSummary(){
     +'<tr><td>CVR</td><td class="op-val" id="op-cnt-cvr-v">—</td><td><span class="op-badge op-neut" id="op-cnt-cvr-d">—</span></td></tr>'
     +'</tbody></table></div>'
     +'<div class="op-sec-lbl" style="margin-top:6px;"><span class="op-dot op-dot-cal"></span>Calidad de Oferta</div>'
-    +'<div class="op-mwrap"><table class="op-mt"><thead><tr><th></th><th>TOTAL (V)</th><th>vs Anterior</th></tr></thead><tbody>'
+    +'<div class="op-mwrap"><table class="op-mt"><thead><tr><th></th><th>TOTAL (V)</th><th>'+(COMP_CAMPAIGN?'vs '+COMP_CAMPAIGN.name:'vs Anterior')+'</th></tr></thead><tbody>'
     +'<tr><td>% RIU High</td><td class="op-val" id="op-cal-riu-v">—</td><td><span class="op-badge op-neut" id="op-cal-riu-d">—</span></td></tr>'
     +'<tr><td>% con Oferta</td><td class="op-val" id="op-cal-of-v">—</td><td><span class="op-badge op-neut" id="op-cal-of-d">—</span></td></tr>'
     +'<tr><td>DTO Ponderado</td><td class="op-val" id="op-cal-dto-v">—</td><td><span class="op-badge op-neut" id="op-cal-dto-d">—</span></td></tr>'
@@ -866,13 +979,10 @@ function renderSummary(){
     +'</div>'
     // RIGHT
     +'<div class="op-right">'
-    +'<div class="op-row-ms"><div class="op-creative-row">'
+    +'<div class="op-row-ms"><div class="op-creative-row" style="justify-content:center;">'
     +'<div class="op-cblock"><img class="op-creative-img" src="'+IMG_CEL+'" alt="Celebrity" onerror="this.style.display=\'none\'">'
     +'<div class="op-cinfo"><span class="op-clbl">Celebrity</span><span class="op-ctr-lbl">CTR</span>'
     +'<div style="display:flex;align-items:baseline;gap:7px;"><span class="op-ctr-val" id="op-cel-ctr-v">—</span><span class="op-badge op-neut" id="op-cel-ctr-d">—</span></div></div></div>'
-    +'<div class="op-cblock"><img class="op-creative-img" src="'+IMG_TAC+'" alt="Tachados" onerror="this.style.display=\'none\'">'
-    +'<div class="op-cinfo"><span class="op-clbl">Tachados</span><span class="op-ctr-lbl">CTR</span>'
-    +'<div style="display:flex;align-items:baseline;gap:7px;"><span class="op-ctr-val" id="op-tac-ctr-v">—</span><span class="op-badge op-neut" id="op-tac-ctr-d">—</span></div></div></div>'
     +'</div></div>'
     +'<div class="op-row-landing"><div class="op-chart-wrap">'
     +'<div class="op-chart-top"><div class="op-sec-lbl" style="padding:5px 0 2px;"><span class="op-dot op-dot-ms"></span>Sesiones Landing · Diario vs Target</div>'
@@ -1593,8 +1703,8 @@ function buildCmpBar(){
 }
 
 function setCmpCampaign(id){
-  if(!id){ COMP_D=null; COMP_CAMPAIGN=null; CMP_IDX=''; renderAll(); return; }
-  // Backward compat: entries de historical.json
+  if(!id){ COMP_D=null; COMP_CAMPAIGN=null; COMP_C_KPIS=null; CMP_IDX=''; renderAll(); return; }
+  // Backward compat: entries de historical.json (no tienen archivo calidad)
   if(id.indexOf('hist_')===0){
     var idx=parseInt(id.replace('hist_',''));
     var h=(D.historical||[])[idx]; if(!h) return;
@@ -1603,21 +1713,36 @@ function setCmpCampaign(id){
             ms:h.ms||[], landing:h.landing||[], container:h.container||[],
             total_containers:h.total_containers||[], total_site:h.total_site||[],
             targets:h.targets||{}};
+    COMP_C_KPIS=h.calidad||null;
     CMP_IDX='1'; renderAll(); return;
   }
   // Campañas del registro campaigns.json
   var camp=CAMPAIGNS.filter(function(c){return c.id===id;})[0];
   if(!camp) return;
-  COMP_CAMPAIGN=camp; CMP_IDX='1';
+  COMP_CAMPAIGN=camp; CMP_IDX='1'; COMP_C_KPIS=null;
   if(typeof google!=='undefined'&&google.script){
     google.script.run
-      .withSuccessHandler(function(d){COMP_D=d; renderAll();})
+      .withSuccessHandler(function(d){
+        COMP_D=d; renderAll();
+        // También cargamos calidad de la campaña de comparación
+        google.script.run
+          .withSuccessHandler(function(cc){ COMP_C_KPIS=computeCalKpis(cc); if(ACTIVE_TAB==='summary') opKPIs(); })
+          .withFailureHandler(function(){})
+          .getCalidadData(camp.calidad_file, camp.oferta_file);
+      })
       .withFailureHandler(function(){COMP_D=null; renderAll();})
       .getJsonData(camp.data_file);
   } else {
     fetch((camp.data_file||'data.json')+'?v='+Date.now())
       .then(function(r){return r.json();})
-      .then(function(d){COMP_D=d; renderAll();})
+      .then(function(d){
+        COMP_D=d; renderAll();
+        var cf=camp.calidad_file||'calidad.json';
+        fetch(cf+'?v='+Date.now())
+          .then(function(r){return r.json();})
+          .then(function(cc){ COMP_C_KPIS=computeCalKpis(cc); if(ACTIVE_TAB==='summary') opKPIs(); })
+          .catch(function(){});
+      })
       .catch(function(){COMP_D=null; renderAll();});
   }
 }
@@ -2125,7 +2250,7 @@ function renderLandingOrig(){
     b.transactions+=+r.transactions||0; b.nsi+=+r.nsi||0; b.buyers+=+r.buyers||0;
     b.ul+=+r.users_landing||0; b.uc+=+r.users_container||0;
   });
-  var dates=Object.keys(byDate).sort();
+  var dates=activeDates(Object.keys(byDate).sort());
   var tot=dates.reduce(function(a,d){var b=byDate[d];
     a.sessions+=b.sessions;a.nmv+=b.nmv;a.orders+=b.orders;a.transactions+=b.transactions;
     a.nsi+=b.nsi;a.buyers+=b.buyers;a.ul+=b.ul;a.uc+=b.uc;return a;
@@ -2446,8 +2571,18 @@ function renderOptLanding(){
 
 // ── ONE PAGER HELPERS ──
 function opDayIdx(s){return Math.round((new Date(s+'T00:00:00')-window.OP_CAMP_START)/86400000);}
-function opSum(arr,i0,i1){return (arr||[]).slice(i0,i1+1).reduce(function(a,v){return a+(v||0);},0);}
-function opAvg(arr,i0,i1){var v=(arr||[]).slice(i0,i1+1).filter(function(x){return x!==null;});return v.length?v.reduce(function(a,x){return a+x;},0)/v.length:null;}
+function opSum(arr,i0,i1){
+  var toIdx=window.OP_TO_IDX_SET||{};
+  return (arr||[]).slice(i0,i1+1).reduce(function(a,v,j){
+    if(toIdx[i0+j]) return a; // saltar días TO
+    return a+(v||0);
+  },0);
+}
+function opAvg(arr,i0,i1){
+  var toIdx=window.OP_TO_IDX_SET||{};
+  var v=(arr||[]).slice(i0,i1+1).filter(function(x,j){return !toIdx[i0+j]&&x!==null;});
+  return v.length?v.reduce(function(a,x){return a+x;},0)/v.length:null;
+}
 function opN(n){if(n===null||n===undefined)return '—';if(Math.abs(n)>=1e6)return (n/1e6).toFixed(1)+'M';if(Math.abs(n)>=1e3)return (n/1e3).toFixed(1)+'K';return Math.round(n).toString();}
 function opP(n,d){return n===null?'—':(n*100).toFixed(d||2)+'%';}
 function opU(n){return n===null?'—':'$'+opN(n);}
@@ -2475,7 +2610,8 @@ function opKPIs(){
   // MS
   var msCtr=opAvg(OP.ms_ctr,i0,i1),msTgt=opAvg(OP.ms_ctr_tgt,i0,i1);
   opSet('op-ms-ctr-v','op-ms-ctr-d',opP(msCtr),opDt(msCtr,msTgt,true));
-  opSet('op-cel-ctr-v','op-cel-ctr-d',opP(opAvg(OP.celebrity_ctr,i0,i1)),{text:'—',cls:'op-neut'});
+  var celCtr=opAvg(OP.celebrity_ctr,i0,i1),celTgt=(D.targets&&D.targets.ms&&+D.targets.ms.ctr_principal>0)?+D.targets.ms.ctr_principal:null;
+  opSet('op-cel-ctr-v','op-cel-ctr-d',opP(celCtr),opDt(celCtr,celTgt,true));
   opSet('op-tac-ctr-v','op-tac-ctr-d',opP(opAvg(OP.tachados_ctr,i0,i1)),{text:'—',cls:'op-neut'});
   // Landing
   var lS=opSum(OP.landing_ses,i0,i1)||null,lSt=opSum(OP.landing_ses_tgt,i0,i1)||null;
@@ -2491,16 +2627,23 @@ function opKPIs(){
   opSet('op-cnt-nmv-v','op-cnt-nmv-d',opU(cN),opDt(cN,cNt,false));
   var cNp=opAvg(OP.cont_nmvpct,i0,i1),cNpt=opAvg(OP.cont_nmvpct_tgt,i0,i1);
   opSet('op-cnt-nmvp-v','op-cnt-nmvp-d',opP(cNp),opDt(cNp,cNpt,true));
-  opSet('op-cnt-asp-v','op-cnt-asp-d',opU(opAvg(OP.cont_asp,i0,i1)),{text:'—',cls:'op-neut'});
+  var cAsp=opAvg(OP.cont_asp,i0,i1),cAspTgt=(D.targets&&D.targets.nasp!=null)?+D.targets.nasp:null;
+  opSet('op-cnt-asp-v','op-cnt-asp-d',opU(cAsp),opDt(cAsp,cAspTgt,false));
   var cNsi=opSum(OP.cont_nsi,i0,i1)||null,cNsit=opSum(OP.cont_nsi_tgt,i0,i1)||null;
   opSet('op-cnt-nsi-v','op-cnt-nsi-d',opN(cNsi),opDt(cNsi,cNsit,false));
   var cCvr=opAvg(OP.cont_cvr,i0,i1),cCvrt=opAvg(OP.cont_cvr_tgt,i0,i1);
   opSet('op-cnt-cvr-v','op-cnt-cvr-d',opP(cCvr),opDt(cCvr,cCvrt,true));
-  // Calidad (static)
-  function calDt(v,t){if(v===null)return {text:'—',cls:'op-neut'};var cls=t===null?'op-neut':v>=t?'op-pos':'op-neg';return {text:v.toFixed(1)+'%'+(t!==null?' / '+t.toFixed(1)+'%':''),cls:cls};}
-  opSet('op-cal-riu-v','op-cal-riu-d',OP.calidad_riu_high!==null?OP.calidad_riu_high.toFixed(1)+'%':'—',calDt(OP.calidad_riu_high,null));
-  opSet('op-cal-of-v','op-cal-of-d',OP.calidad_con_oferta!==null?OP.calidad_con_oferta.toFixed(1)+'%':'—',calDt(OP.calidad_con_oferta,null));
-  opSet('op-cal-dto-v','op-cal-dto-d',OP.calidad_dto_pond!==null?OP.calidad_dto_pond.toFixed(1)+'%':'—',calDt(OP.calidad_dto_pond,null));
+  // Calidad — con comparación histórica si COMP_C_KPIS está disponible
+  function calDt(v,t){
+    if(v===null) return {text:'—',cls:'op-neut'};
+    if(t===null) return {text:'—',cls:'op-neut'};
+    var diff=v-t, sign=diff>=0?'+':'';
+    return {text:sign+diff.toFixed(1)+'pp', cls:diff>=0?'op-pos':'op-neg'};
+  }
+  var cmpK=COMP_C_KPIS;
+  opSet('op-cal-riu-v','op-cal-riu-d',OP.calidad_riu_high!==null?OP.calidad_riu_high.toFixed(1)+'%':'—',calDt(OP.calidad_riu_high,cmpK?cmpK.riu_high:null));
+  opSet('op-cal-of-v','op-cal-of-d',OP.calidad_con_oferta!==null?OP.calidad_con_oferta.toFixed(1)+'%':'—',calDt(OP.calidad_con_oferta,cmpK?cmpK.con_oferta:null));
+  opSet('op-cal-dto-v','op-cal-dto-d',OP.calidad_dto_pond!==null?OP.calidad_dto_pond.toFixed(1)+'%':'—',calDt(OP.calidad_dto_pond,cmpK?cmpK.dto_pond:null));
 }
 function opFmtK(n){if(n===null||n===undefined)return '—';if(Math.abs(n)>=1e6)return (n/1e6).toFixed(1)+'M';if(Math.abs(n)>=1e3)return (n/1e3).toFixed(1)+'K';return Math.round(n).toString();}
 function opFunnel(view){
@@ -2522,11 +2665,39 @@ function opFunnel(view){
       +'</div></td></tr>';
   } else if(view==='fin'||view==='oferta'){
     var rows=view==='fin'?OP.calidad_funnel_fin:OP.calidad_funnel_oferta;
-    th.innerHTML='<tr><th></th><th>Exhibidos</th><th>Visitados</th><th>Con GMV</th><th>%Visit</th><th>%Conv</th></tr>';
-    tb.innerHTML=(rows||[]).map(function(r){return '<tr><td>'+r.categoria+'</td><td class="op-fval">'+opFmtK(r.exhibidos)+'</td><td class="op-fval">'+opFmtK(r.visitados)+'</td><td class="op-fval">'+opFmtK(r.vendidos)+'</td><td class="op-fpct">'+r.pct_visita.toFixed(1)+'%</td><td class="op-fpct">'+r.pct_conv.toFixed(1)+'%</td></tr>';}).join('');
+    th.innerHTML='<tr><th></th><th>#Exhibidos</th><th>%Visitados</th><th>#Visitados</th><th>%NMV</th><th>#Vendidos</th><th>#Vend/#Exhib</th></tr>';
+    tb.innerHTML=(rows||[]).map(function(r){
+      var pctFunnel=r.exhibidos>0?(r.vendidos/r.exhibidos*100):0;
+      if(r.isSubrow){
+        // Sub-row: subset de la fila padre (Financing by Meli), no sumar al total
+        var pctFunnelSub=r.exhibidos>0?(r.vendidos/r.exhibidos*100):0;
+        var pctVisitaSub=r.exhibidos>0?(r.visitados/r.exhibidos*100):0;
+        var pctConvSub=r.visitados>0?(r.vendidos/r.visitados*100):0;
+        var eStyle=r.exhibidos>0?'color:#555;':'color:#bbb;';
+        var gStyle=r.vendidos>0?'color:#555;':'color:#bbb;';
+        return '<tr style="background:#f7f7fb;font-size:10px;">'
+          +'<td style="padding-left:20px;color:#888;font-style:italic;">'+r.categoria+'</td>'
+          +'<td class="op-fval" style="'+eStyle+'">'+opFmtK(r.exhibidos||null)+'</td>'
+          +'<td class="op-fpct" style="color:#9c6ef0;font-weight:600;">'+(r.pctOfParent||0).toFixed(1)+'%<span style="font-size:8px;color:#aaa;"> s/sin</span></td>'
+          +'<td class="op-fval" style="color:#555;">'+opFmtK(r.visitados)+'</td>'
+          +'<td class="op-fpct" style="color:#888;">'+pctConvSub.toFixed(1)+'%</td>'
+          +'<td class="op-fval" style="'+gStyle+'">'+opFmtK(r.vendidos||null)+'</td>'
+          +'<td class="op-fpct" style="color:#bbb;">'+pctFunnelSub.toFixed(2)+'%</td>'
+          +'</tr>';
+      }
+      return '<tr>'
+        +'<td>'+r.categoria+'</td>'
+        +'<td class="op-fval">'+opFmtK(r.exhibidos)+'</td>'
+        +'<td class="op-fpct">'+r.pct_visita.toFixed(1)+'%</td>'
+        +'<td class="op-fval">'+opFmtK(r.visitados)+'</td>'
+        +'<td class="op-fpct">'+r.pct_conv.toFixed(1)+'%</td>'
+        +'<td class="op-fval">'+opFmtK(r.vendidos)+'</td>'
+        +'<td class="op-fpct">'+pctFunnel.toFixed(2)+'%</td>'
+        +'</tr>';
+    }).join('');
   } else {
-    var cr=OP.calidad_funnel_containers||[];
-    th.innerHTML='<tr><th>Container</th><th>Exhibidos</th><th>Sin Oferta</th><th>% Sin Oferta</th></tr>';
+    var cr=(OP.calidad_funnel_containers||[]).slice().sort(function(a,b){return b.sin_oferta-a.sin_oferta;});
+    th.innerHTML='<tr><th>Container</th><th>#Items Exhibidos</th><th>#Items Sin Oferta</th><th>% Sin Oferta</th></tr>';
     tb.innerHTML=cr.map(function(r){return '<tr><td style="font-size:9px;">'+r.container+'</td><td class="op-fval">'+opFmtK(r.exhibidos)+'</td><td class="op-fval" style="color:#cc2222;">'+opFmtK(r.sin_oferta)+'</td><td class="op-fpct" style="color:#cc2222;">'+r.pct_sin_oferta.toFixed(1)+'%</td></tr>';}).join('');
   }
 }
