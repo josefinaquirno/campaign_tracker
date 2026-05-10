@@ -46,5 +46,5 @@ with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
 
 print(f"✓ Guardado en {OUTPUT_FILE}")
 print(f"  Fechas: {data.get('dates', [])}")
-print(f"  Total landing NMV: {sum(d.get('landing', {}).get('nmv', 0) for d in data.get('daily', [])):.0f}")
-print(f"  Total container NMV: {sum(d.get('container', {}).get('nmv', 0) for d in data.get('daily', [])):.0f}")
+print(f"  Total landing NMV:    {sum(data.get('landing', {}).get('nmv', [])):,.0f}")
+print(f"  Total container NMV:  {sum(data.get('container', {}).get('nmv', [])):,.0f}")
