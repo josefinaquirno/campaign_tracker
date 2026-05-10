@@ -88,8 +88,23 @@
           ]
         },
         "options": {},
-        "specifyBody": "json",
-        "body": "={{ JSON.stringify((() => { const sha = $('Get SHA T1').first().json?.sha; const body = { message: 'chore: refresh targets_t1.json [skip ci]', content: $('BQ Targets T1').first().json.data_b64.replace(/\\n/g,'').replace(/\\r/g,'') }; if (sha) body.sha = sha; return body; })()) }}"
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "message",
+              "value": "chore: refresh targets_t1.json [skip ci]"
+            },
+            {
+              "name": "content",
+              "value": "={{ $('BQ Targets T1').first().json.data_b64.replace(/\\n/g, '').replace(/\\r/g, '') }}"
+            },
+            {
+              "name": "sha",
+              "value": "={{ $('Get SHA T1').first().json.sha }}"
+            }
+          ]
+        }
       },
       "id": "push-targets-t1",
       "name": "Push T1 to GitHub",
