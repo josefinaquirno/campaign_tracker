@@ -1,90 +1,144 @@
 {
-    "name": "Campaign Tracker — Targets T1",
-    "nodes": [
-        {
-            "parameters": {
-                "rule": {
-                    "interval": [
-                        {
-                            "field": "cronExpression",
-                            "expression": "0 8 * * *"
-                        }
-                    ]
-                }
-            },
-            "id": "schedule-trigger-t1",
-            "name": "Schedule Trigger",
-            "type": "n8n-nodes-base.scheduleTrigger",
-            "position": [160, 80],
-            "typeVersion": 1.2
-        },
-        {
-            "parameters": {
-                "projectId": "meli-bi-data",
-                "sqlQuery": "-- ============================================================\n-- CAMPAIGN TRACKER — Targets T1\n-- HOT SALE 2026 (2026-05-11 → 2026-05-18)\n--\n-- METODOLOGÍA:\n--   Landing sessions : share_DOW × sesiones_plan_2026\n--                      share = avg(HS/CM/BF ratio) por día de semana\n--                      (sesiones landing / sesiones site reales 2025)\n--   Landing funnel   : ratios internos por DOW (usuarios/ses,\n--                      ses_cont/ses, ses_vip/ses, nsi/ses, etc.)\n--                      de los 3 eventos T1 2025\n--   Container        : promedio directo de sesiones por DOW\n--                      + funnel interno (vip/ses, nsi/ses, trx/ses)\n--                      NMV = trx × $138 (ASP HS2025)\n--\n-- Para nueva campaña T1: actualizar fechas en CAMPAIGN_DATES,\n--   TS_SESSIONS, TS_NMV y el share si cambió\n-- ============================================================\n\nWITH\n\n-- 1. Fechas de la campaña activa\nCAMPAIGN_DATES AS (\n  SELECT\n    date,\n    FORMAT_DATE('%w', date) AS dow\n  FROM UNNEST(GENERATE_DATE_ARRAY(\n    DATE '2026-05-11', DATE '2026-05-18', INTERVAL 1 DAY\n  )) AS date\n),\n\n-- 2. Total Site 2026: sesiones planeadas\nTS_SESSIONS AS (\n  SELECT CAST(fecha AS DATE) AS date, SUM(sesiones_plan) AS sessions\n  FROM `meli-sbox.PLANNINGMLA.KPIS_MLA_MKT`\n  WHERE fecha IS NOT NULL\n    AND sesiones_plan IS NOT NULL\n    AND CAST(fecha AS DATE) BETWEEN DATE '2026-05-11' AND DATE '2026-05-18'\n  GROUP BY 1\n),\n\n-- 3. Total Site 2026: NMV planeado\nTS_NMV AS (\n  SELECT CAST(fecha AS DATE) AS date, SUM(PLAN.TGMV_USD) AS nmv\n  FROM `meli-sbox.PLANNINGMLA.DM_TARGETS_MLA`\n  WHERE fecha IS NOT NULL\n    AND PLAN.TGMV_USD IS NOT NULL\n    AND CAST(fecha AS DATE) BETWEEN DATE '2026-05-11' AND DATE '2026-05-18'\n  GROUP BY 1\n),\n\n-- 4. Landing histórica diaria: suma full + parcial por fecha\n--    Cada landing anclada a su evento (sin contaminación cruzada)\nLANDING_DAILY AS (\n  SELECT\n    t.DATE,\n    SUM(t.NOT_LOG_USERS)       AS usuarios,\n    SUM(t.SESSIONS)            AS sessions,\n    SUM(t.LISTADO_TOTAL_USERS) AS ses_cont,\n    SUM(t.VPP_TOTAL_USERS)     AS ses_vip,\n    SUM(t.SI_168HS)            AS nsi,\n    SUM(t.TRANSACTIONS_168HS)  AS trx,\n    SUM(t.NMV_168HS)           AS nmv\n  FROM `meli-bi-data.WHOWNER.DM_LANDING_ATTRIBUTION_CONTAINER_DEAL` t\n  WHERE t.SITE = 'MLA'\n    AND (\n      -- HOT SALE 2025: solo hot-sale\n      (t.DATE BETWEEN '2025-05-12' AND '2025-05-19'\n       AND t.LANDING_NAME = 'hot-sale')\n      OR\n      -- CYBER MONDAY 2025\n      (t.DATE BETWEEN '2025-11-03' AND '2025-11-11'\n       AND t.LANDING_NAME IN ('cyber-monday', 'promotional-home-mla'))\n      OR\n      -- BLACK FRIDAY 2025\n      (t.DATE BETWEEN '2025-11-26' AND '2025-12-03'\n       AND t.LANDING_NAME IN ('black-friday', 'black friday parcial'))\n    )\n  GROUP BY t.DATE\n),\n\n-- 5. Shares de landing por DOW: promedio de los 3 eventos T1 2025\n--    Fuente: cálculo por evento (sesiones reales) promediado en sheet\n--    Para actualizar: recalcular cuando haya nuevos eventos T1\nDOW_SHARES AS (\n  SELECT dow, share\n  FROM UNNEST([\n    STRUCT('0' AS dow, 0.454 AS share),  -- Domingo\n    STRUCT('1' AS dow, 0.408 AS share),  -- Lunes\n    STRUCT('2' AS dow, 0.395 AS share),  -- Martes\n    STRUCT('3' AS dow, 0.403 AS share),  -- Miércoles\n    STRUCT('4' AS dow, 0.410 AS share),  -- Jueves\n    STRUCT('5' AS dow, 0.420 AS share),  -- Viernes\n    STRUCT('6' AS dow, 0.441 AS share)   -- Sábado\n  ])\n),\n\n-- 6. Ratios internos del funnel landing por DOW\n--    f_* = metric / sessions de landing (sin usar site sessions)\nLANDING_FUNNEL AS (\n  SELECT\n    FORMAT_DATE('%w', DATE)                    AS dow,\n    AVG(SAFE_DIVIDE(usuarios, sessions))        AS f_usuarios,\n    AVG(SAFE_DIVIDE(ses_cont, sessions))        AS f_ses_cont,\n    AVG(SAFE_DIVIDE(ses_vip,  sessions))        AS f_ses_vip,\n    AVG(SAFE_DIVIDE(nsi,      sessions))        AS f_nsi,\n    AVG(SAFE_DIVIDE(trx,      sessions))        AS f_trx,\n    AVG(SAFE_DIVIDE(nmv,      sessions))        AS f_nmv\n  FROM LANDING_DAILY\n  GROUP BY 1\n),\n\n-- 6. Container histórico diario: suma containers T1 2025\nCONTAINER_DAILY AS (\n  SELECT\n    c.DATE,\n    SUM(c.C_UNIQUE_SESSION)  AS sessions,\n    SUM(c.V_UNIQUE_SESSION)  AS ses_vip,\n    SUM(c.SI_168HS)          AS nsi,\n    SUM(c.TRANSACTION_168HS) AS trx\n  FROM `meli-bi-data.WHOWNER.DM_CONTAINERS_DEALS_ATTRIBUTION` c\n  WHERE c.SITE = 'MLA'\n    AND (\n      UPPER(c.CONTAINER_NAME) LIKE 'MK T1 HOT SALE%'\n      OR UPPER(c.CONTAINER_NAME) LIKE 'MK T1 CM%'\n      OR UPPER(c.CONTAINER_NAME) LIKE 'MK T1 BLACK FRIDAY%'\n    )\n    AND c.DATE IN (\n      '2025-05-12','2025-05-13','2025-05-14','2025-05-15',\n      '2025-05-16','2025-05-17','2025-05-18','2025-05-19',\n      '2025-11-03','2025-11-04','2025-11-05','2025-11-06',\n      '2025-11-07','2025-11-08','2025-11-09','2025-11-10',\n      '2025-11-11','2025-11-26','2025-11-27','2025-11-28',\n      '2025-11-29','2025-11-30','2025-12-01','2025-12-02',\n      '2025-12-03'\n    )\n  GROUP BY c.DATE\n),\n\n-- 7. Benchmark container por DOW:\n--    avg_sessions = promedio directo de sesiones (target base)\n--    f_* = ratios internos del funnel\nCONTAINER_BENCHMARK AS (\n  SELECT\n    FORMAT_DATE('%w', DATE)               AS dow,\n    AVG(sessions)                          AS avg_sessions,\n    AVG(SAFE_DIVIDE(ses_vip, sessions))    AS f_ses_vip,\n    AVG(SAFE_DIVIDE(nsi,     sessions))    AS f_nsi,\n    AVG(SAFE_DIVIDE(trx,     sessions))    AS f_trx\n  FROM CONTAINER_DAILY\n  GROUP BY 1\n),\n\n-- 8. MS CTR benchmark (año en curso)\nMS_CTR AS (\n  SELECT\n    CASE\n      WHEN LOWER(LINE_ITEM_NAME) LIKE '%tachado%'\n        OR LOWER(LINE_ITEM_NAME) LIKE '%celebrity%' THEN 'PRINCIPAL'\n      WHEN LOWER(LINE_ITEM_NAME) LIKE '%alta%'      THEN 'HIGH'\n      WHEN LOWER(LINE_ITEM_NAME) LIKE '%media%'     THEN 'MID'\n      ELSE 'OTHER'\n    END AS bucket,\n    SAFE_DIVIDE(SUM(CLICKS_QTY), NULLIF(SUM(IMPRESSION_VIEWS_QTY), 0)) AS ctr\n  FROM `meli-bi-data.WHOWNER.BT_ADS_DISP_METRICS_DAILY`\n  WHERE EVENT_LOCAL_DT BETWEEN '2026-01-01' AND CURRENT_DATE()\n    AND SIT_SITE_ID = 'MLA'\n    AND PLACEMENT LIKE '%MAIN-SLIDER%'\n    AND LINE_ITEM_NAME NOT LIKE '%SPLINTER%'\n    AND CAMPAIGN_NAME NOT LIKE '%FD%'\n  GROUP BY 1\n),\n\n-- 10. Targets finales por fecha\n--     Landing  : share_DOW × ts_sessions + funnel interno\n--     Container: avg_sessions directo + funnel interno\n--     cnt_nmv  : cnt_trx × $138\nTARGETS_BY_DATE AS (\n  SELECT\n    cd.date,\n    cd.dow,\n    COALESCE(ts_s.sessions, 0)                                                               AS ts_sessions,\n    COALESCE(ts_n.nmv,      0)                                                               AS ts_nmv,\n    -- Landing: share por DOW × sesiones planeadas\n    ROUND(COALESCE(ds.share, 0) * COALESCE(ts_s.sessions, 0))                               AS ldg_sessions,\n    ROUND(COALESCE(ds.share, 0) * COALESCE(ts_s.sessions, 0) * COALESCE(lf.f_usuarios, 0)) AS ldg_usuarios,\n    ROUND(COALESCE(ds.share, 0) * COALESCE(ts_s.sessions, 0) * COALESCE(lf.f_ses_cont, 0)) AS ldg_ses_cont,\n    ROUND(COALESCE(ds.share, 0) * COALESCE(ts_s.sessions, 0) * COALESCE(lf.f_ses_vip,  0)) AS ldg_ses_vip,\n    ROUND(COALESCE(ds.share, 0) * COALESCE(ts_s.sessions, 0) * COALESCE(lf.f_nsi,      0)) AS ldg_nsi,\n    ROUND(COALESCE(ds.share, 0) * COALESCE(ts_s.sessions, 0) * COALESCE(lf.f_trx,      0)) AS ldg_trx,\n    ROUND(COALESCE(ds.share, 0) * COALESCE(ts_s.sessions, 0) * COALESCE(lf.f_nmv,      0)) AS ldg_nmv,\n    -- Container: promedio directo + funnel interno\n    ROUND(COALESCE(cb.avg_sessions,             0))                                          AS cnt_sessions,\n    ROUND(COALESCE(cb.avg_sessions, 0) * COALESCE(cb.f_ses_vip, 0))                         AS cnt_ses_vip,\n    ROUND(COALESCE(cb.avg_sessions, 0) * COALESCE(cb.f_nsi,     0))                         AS cnt_nsi,\n    ROUND(COALESCE(cb.avg_sessions, 0) * COALESCE(cb.f_trx,     0))                         AS cnt_trx,\n    ROUND(COALESCE(cb.avg_sessions, 0) * COALESCE(cb.f_trx,     0) * 138.0)                 AS cnt_nmv\n  FROM CAMPAIGN_DATES cd\n  LEFT JOIN TS_SESSIONS        ts_s ON cd.date  = ts_s.date\n  LEFT JOIN TS_NMV              ts_n ON cd.date  = ts_n.date\n  LEFT JOIN DOW_SHARES          ds   ON cd.dow   = ds.dow\n  LEFT JOIN LANDING_FUNNEL      lf   ON cd.dow   = lf.dow\n  LEFT JOIN CONTAINER_BENCHMARK cb   ON cd.dow   = cb.dow\n)\n\nSELECT TO_BASE64(CAST(CONCAT(\n  '{\"dates\":',         (SELECT TO_JSON_STRING(ARRAY_AGG(CAST(date AS STRING) ORDER BY date)) FROM TARGETS_BY_DATE),\n  ',\"to_dates\":',      (SELECT TO_JSON_STRING(ARRAY_AGG(CAST(date AS STRING) ORDER BY date)) FROM TARGETS_BY_DATE),\n  ',\"ms\":{',\n    '\"ctr_all\":',        IFNULL(CAST((SELECT ROUND(SAFE_DIVIDE(SUM(CLICKS_QTY),NULLIF(SUM(IMPRESSION_VIEWS_QTY),0)),4) FROM `meli-bi-data.WHOWNER.BT_ADS_DISP_METRICS_DAILY` WHERE EVENT_LOCAL_DT BETWEEN '2026-01-01' AND CURRENT_DATE() AND SIT_SITE_ID = 'MLA' AND PLACEMENT LIKE '%MAIN-SLIDER%' AND LINE_ITEM_NAME NOT LIKE '%SPLINTER%' AND CAMPAIGN_NAME NOT LIKE '%FD%') AS STRING),'0'),\n    ',\"ctr_principal\":', CAST(COALESCE((SELECT ROUND(MAX(IF(bucket='PRINCIPAL',ctr,NULL)),4) FROM MS_CTR),0) AS STRING),\n    ',\"ctr_high\":',      CAST(COALESCE((SELECT ROUND(MAX(IF(bucket='HIGH',    ctr,NULL)),4) FROM MS_CTR),0) AS STRING),\n    ',\"ctr_mid\":',       CAST(COALESCE((SELECT ROUND(MAX(IF(bucket='MID',     ctr,NULL)),4) FROM MS_CTR),0) AS STRING),\n  '}',\n  ',\"total_site\":{\"sessions\":',   (SELECT TO_JSON_STRING(ARRAY_AGG(ROUND(ts_sessions,0) ORDER BY date)) FROM TARGETS_BY_DATE),\n    ',\"nmv\":',                    (SELECT TO_JSON_STRING(ARRAY_AGG(ROUND(ts_nmv,0)      ORDER BY date)) FROM TARGETS_BY_DATE),\n  '}',\n  ',\"landing\":{\"sessions\":',           (SELECT TO_JSON_STRING(ARRAY_AGG(ldg_sessions  ORDER BY date)) FROM TARGETS_BY_DATE),\n    ',\"share_sessions\":',               (SELECT TO_JSON_STRING(ARRAY_AGG(ROUND(SAFE_DIVIDE(CAST(ldg_sessions AS FLOAT64), NULLIF(ts_sessions,0)),6) ORDER BY date)) FROM TARGETS_BY_DATE),\n    ',\"ctr\":',                          (SELECT TO_JSON_STRING(ARRAY_AGG(ROUND(SAFE_DIVIDE(CAST(ldg_ses_cont AS FLOAT64), NULLIF(ldg_usuarios,0)),4) ORDER BY date)) FROM TARGETS_BY_DATE),\n    ',\"usuarios_landing\":',             (SELECT TO_JSON_STRING(ARRAY_AGG(ldg_usuarios  ORDER BY date)) FROM TARGETS_BY_DATE),\n    ',\"ses_contenedor\":',               (SELECT TO_JSON_STRING(ARRAY_AGG(ldg_ses_cont  ORDER BY date)) FROM TARGETS_BY_DATE),\n    ',\"ses_vip\":',                      (SELECT TO_JSON_STRING(ARRAY_AGG(ldg_ses_vip   ORDER BY date)) FROM TARGETS_BY_DATE),\n    ',\"nsi\":',                          (SELECT TO_JSON_STRING(ARRAY_AGG(ldg_nsi       ORDER BY date)) FROM TARGETS_BY_DATE),\n    ',\"transacciones\":',                (SELECT TO_JSON_STRING(ARRAY_AGG(ldg_trx       ORDER BY date)) FROM TARGETS_BY_DATE),\n    ',\"nmv\":',                          (SELECT TO_JSON_STRING(ARRAY_AGG(ldg_nmv       ORDER BY date)) FROM TARGETS_BY_DATE),\n  '}',\n  ',\"container\":{\"sessions\":',         (SELECT TO_JSON_STRING(ARRAY_AGG(cnt_sessions  ORDER BY date)) FROM TARGETS_BY_DATE),\n    ',\"nmv\":',                          (SELECT TO_JSON_STRING(ARRAY_AGG(cnt_nmv       ORDER BY date)) FROM TARGETS_BY_DATE),\n    ',\"share_nmv\":',                    (SELECT TO_JSON_STRING(ARRAY_AGG(ROUND(SAFE_DIVIDE(CAST(cnt_nmv AS FLOAT64), NULLIF(ts_nmv,0)),6) ORDER BY date)) FROM TARGETS_BY_DATE),\n    ',\"share_sessions\":',               (SELECT TO_JSON_STRING(ARRAY_AGG(ROUND(SAFE_DIVIDE(CAST(cnt_sessions AS FLOAT64), NULLIF(ts_sessions,0)),6) ORDER BY date)) FROM TARGETS_BY_DATE),\n    ',\"cvr\":',                          (SELECT TO_JSON_STRING(ARRAY_AGG(ROUND(SAFE_DIVIDE(CAST(cnt_trx AS FLOAT64), NULLIF(cnt_sessions,0)),4) ORDER BY date)) FROM TARGETS_BY_DATE),\n    ',\"ses_vip\":',                      (SELECT TO_JSON_STRING(ARRAY_AGG(cnt_ses_vip   ORDER BY date)) FROM TARGETS_BY_DATE),\n    ',\"nsi\":',                          (SELECT TO_JSON_STRING(ARRAY_AGG(cnt_nsi       ORDER BY date)) FROM TARGETS_BY_DATE),\n    ',\"transacciones\":',                (SELECT TO_JSON_STRING(ARRAY_AGG(cnt_trx       ORDER BY date)) FROM TARGETS_BY_DATE),\n  '}',\n  ',\"nasp\":138.0',\n  ',\"refreshed_at\":\"', FORMAT_TIMESTAMP('%Y-%m-%dT%H:%M:%S', CURRENT_TIMESTAMP(), 'America/Argentina/Buenos_Aires'), '\"}'\n) AS BYTES)) AS data_b64",
-                "options": {
-                    "location": "US"
-                }
-            },
-            "id": "bq-targets-t1",
-            "name": "BQ Targets T1",
-            "type": "n8n-nodes-base.googleBigQuery",
-            "position": [340, 80],
-            "typeVersion": 2
-        },
-        {
-            "parameters": {
-                "url": "https://api.github.com/repos/josefinaquirno/campaign_tracker/contents/docs/targets_t1.json",
-                "sendHeaders": true,
-                "headerParameters": {
-                    "parameters": [
-                        {"name": "Authorization", "value": "Bearer TU_GITHUB_TOKEN_ACA"},
-                        {"name": "User-Agent",    "value": "verdi-flow"}
-                    ]
-                },
-                "options": {}
-            },
-            "id": "get-sha-t1",
-            "name": "Get SHA T1",
-            "type": "n8n-nodes-base.httpRequest",
-            "position": [520, 80],
-            "typeVersion": 4.2
-        },
-        {
-            "parameters": {
-                "method": "PUT",
-                "url": "https://api.github.com/repos/josefinaquirno/campaign_tracker/contents/docs/targets_t1.json",
-                "sendHeaders": true,
-                "headerParameters": {
-                    "parameters": [
-                        {"name": "Authorization", "value": "Bearer TU_GITHUB_TOKEN_ACA"},
-                        {"name": "Content-Type",  "value": "application/json"},
-                        {"name": "User-Agent",    "value": "verdi-flow"}
-                    ]
-                },
-                "sendBody": true,
-                "bodyParameters": {
-                    "parameters": [
-                        {"name": "message", "value": "chore: refresh targets_t1.json [skip ci]"},
-                        {"name": "content", "value": "={{ $('BQ Targets T1').first().json.data_b64.replace(/\\n/g, '').replace(/\\r/g, '') }}"},
-                        {"name": "sha",     "value": "={{ $json.sha }}"}
-                    ]
-                },
-                "options": {}
-            },
-            "id": "push-targets-t1",
-            "name": "Push T1 to GitHub",
-            "type": "n8n-nodes-base.httpRequest",
-            "position": [700, 80],
-            "typeVersion": 4.2
+  "name": "Campaign Tracker — Targets T1",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * *"
+            }
+          ]
         }
-    ],
-    "connections": {
-        "Schedule Trigger": {"main": [[{"node": "BQ Targets T1",    "type": "main", "index": 0}]]},
-        "BQ Targets T1":    {"main": [[{"node": "Get SHA T1",        "type": "main", "index": 0}]]},
-        "Get SHA T1":       {"main": [[{"node": "Push T1 to GitHub", "type": "main", "index": 0}]]}
+      },
+      "id": "schedule-trigger-t1",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "position": [
+        160,
+        80
+      ],
+      "typeVersion": 1.2
     },
-    "pinData": {},
-    "active": false,
-    "settings": {"executionOrder": "v1"}
+    {
+      "parameters": {
+        "projectId": "meli-bi-data",
+        "sqlQuery": "-- ============================================================\n-- CAMPAIGN TRACKER — Targets T1\n-- HOT SALE 2026 (2026-05-11 → 2026-05-18)\n--\n-- METODOLOGÍA:\n--   Landing sessions : share_DOW × sesiones_plan_2026\n--                      share = avg(HS/CM/BF ratio) por día de semana\n--                      (sesiones landing / sesiones site reales 2025)\n--   Landing funnel   : ratios internos por DOW (usuarios/ses,\n--                      ses_cont/ses, ses_vip/ses, nsi/ses, etc.)\n--                      de los 3 eventos T1 2025\n--   Container        : promedio directo de sesiones por DOW\n--                      + funnel interno (vip/ses, nsi/ses, trx/ses)\n--                      NMV = trx × $138 (ASP HS2025)\n--\n-- Para nueva campaña T1: actualizar fechas en CAMPAIGN_DATES,\n--   TS_SESSIONS, TS_NMV y el share si cambió\n-- ============================================================\n\nWITH\n\n-- 1. Fechas de la campaña activa\nCAMPAIGN_DATES AS (\n  SELECT\n    date,\n    FORMAT_DATE('%w', date) AS dow\n  FROM UNNEST(GENERATE_DATE_ARRAY(\n    DATE '2026-05-11', DATE '2026-05-18', INTERVAL 1 DAY\n  )) AS date\n),\n\n-- 2. Total Site 2026: sesiones planeadas\nTS_SESSIONS AS (\n  SELECT CAST(fecha AS DATE) AS date, SUM(sesiones_plan) AS sessions\n  FROM `meli-sbox.PLANNINGMLA.KPIS_MLA_MKT`\n  WHERE fecha IS NOT NULL\n    AND sesiones_plan IS NOT NULL\n    AND CAST(fecha AS DATE) BETWEEN DATE '2026-05-11' AND DATE '2026-05-18'\n  GROUP BY 1\n),\n\n-- 3. Total Site 2026: NMV planeado\nTS_NMV AS (\n  SELECT CAST(fecha AS DATE) AS date, SUM(PLAN.TGMV_USD) AS nmv\n  FROM `meli-sbox.PLANNINGMLA.DM_TARGETS_MLA`\n  WHERE fecha IS NOT NULL\n    AND PLAN.TGMV_USD IS NOT NULL\n    AND CAST(fecha AS DATE) BETWEEN DATE '2026-05-11' AND DATE '2026-05-18'\n  GROUP BY 1\n),\n\n-- 4. Landing histórica diaria: suma full + parcial por fecha\n--    Cada landing anclada a su evento (sin contaminación cruzada)\nLANDING_DAILY AS (\n  SELECT\n    t.DATE,\n    SUM(t.NOT_LOG_USERS)       AS usuarios,\n    SUM(t.SESSIONS)            AS sessions,\n    SUM(t.LISTADO_TOTAL_USERS) AS ses_cont,\n    SUM(t.VPP_TOTAL_USERS)     AS ses_vip,\n    SUM(t.SI_168HS)            AS nsi,\n    SUM(t.TRANSACTIONS_168HS)  AS trx,\n    SUM(t.NMV_168HS)           AS nmv\n  FROM `meli-bi-data.WHOWNER.DM_LANDING_ATTRIBUTION_CONTAINER_DEAL` t\n  WHERE t.SITE = 'MLA'\n    AND (\n      -- HOT SALE 2025: solo hot-sale\n      (t.DATE BETWEEN '2025-05-12' AND '2025-05-19'\n       AND t.LANDING_NAME = 'hot-sale')\n      OR\n      -- CYBER MONDAY 2025\n      (t.DATE BETWEEN '2025-11-03' AND '2025-11-11'\n       AND t.LANDING_NAME IN ('cyber-monday', 'promotional-home-mla'))\n      OR\n      -- BLACK FRIDAY 2025\n      (t.DATE BETWEEN '2025-11-26' AND '2025-12-03'\n       AND t.LANDING_NAME IN ('black-friday', 'black friday parcial'))\n    )\n  GROUP BY t.DATE\n),\n\n-- 5. Shares de landing por DOW: promedio de los 3 eventos T1 2025\n--    Fuente: cálculo por evento (sesiones reales) promediado en sheet\n--    Para actualizar: recalcular cuando haya nuevos eventos T1\nDOW_SHARES AS (\n  SELECT dow, share\n  FROM UNNEST([\n    STRUCT('0' AS dow, 0.454 AS share),  -- Domingo\n    STRUCT('1' AS dow, 0.408 AS share),  -- Lunes\n    STRUCT('2' AS dow, 0.395 AS share),  -- Martes\n    STRUCT('3' AS dow, 0.403 AS share),  -- Miércoles\n    STRUCT('4' AS dow, 0.410 AS share),  -- Jueves\n    STRUCT('5' AS dow, 0.420 AS share),  -- Viernes\n    STRUCT('6' AS dow, 0.441 AS share)   -- Sábado\n  ])\n),\n\n-- 6. Ratios internos del funnel landing por DOW\n--    f_* = metric / sessions de landing (sin usar site sessions)\nLANDING_FUNNEL AS (\n  SELECT\n    FORMAT_DATE('%w', DATE)                    AS dow,\n    AVG(SAFE_DIVIDE(usuarios, sessions))        AS f_usuarios,\n    AVG(SAFE_DIVIDE(ses_cont, sessions))        AS f_ses_cont,\n    AVG(SAFE_DIVIDE(ses_vip,  sessions))        AS f_ses_vip,\n    AVG(SAFE_DIVIDE(nsi,      sessions))        AS f_nsi,\n    AVG(SAFE_DIVIDE(trx,      sessions))        AS f_trx,\n    AVG(SAFE_DIVIDE(nmv,      sessions))        AS f_nmv\n  FROM LANDING_DAILY\n  GROUP BY 1\n),\n\n-- 6. Container histórico diario: suma containers T1 2025\nCONTAINER_DAILY AS (\n  SELECT\n    c.DATE,\n    SUM(c.C_UNIQUE_SESSION)  AS sessions,\n    SUM(c.V_UNIQUE_SESSION)  AS ses_vip,\n    SUM(c.SI_168HS)          AS nsi,\n    SUM(c.TRANSACTION_168HS) AS trx\n  FROM `meli-bi-data.WHOWNER.DM_CONTAINERS_DEALS_ATTRIBUTION` c\n  WHERE c.SITE = 'MLA'\n    AND (\n      UPPER(c.CONTAINER_NAME) LIKE 'MK T1 HOT SALE%'\n      OR UPPER(c.CONTAINER_NAME) LIKE 'MK T1 CM%'\n      OR UPPER(c.CONTAINER_NAME) LIKE 'MK T1 BLACK FRIDAY%'\n    )\n    AND c.DATE IN (\n      '2025-05-12','2025-05-13','2025-05-14','2025-05-15',\n      '2025-05-16','2025-05-17','2025-05-18','2025-05-19',\n      '2025-11-03','2025-11-04','2025-11-05','2025-11-06',\n      '2025-11-07','2025-11-08','2025-11-09','2025-11-10',\n      '2025-11-11','2025-11-26','2025-11-27','2025-11-28',\n      '2025-11-29','2025-11-30','2025-12-01','2025-12-02',\n      '2025-12-03'\n    )\n  GROUP BY c.DATE\n),\n\n-- 7. Benchmark container por DOW:\n--    avg_sessions = promedio directo de sesiones (target base)\n--    f_* = ratios internos del funnel\nCONTAINER_BENCHMARK AS (\n  SELECT\n    FORMAT_DATE('%w', DATE)               AS dow,\n    AVG(sessions)                          AS avg_sessions,\n    AVG(SAFE_DIVIDE(ses_vip, sessions))    AS f_ses_vip,\n    AVG(SAFE_DIVIDE(nsi,     sessions))    AS f_nsi,\n    AVG(SAFE_DIVIDE(trx,     sessions))    AS f_trx\n  FROM CONTAINER_DAILY\n  GROUP BY 1\n),\n\n-- 8. MS CTR benchmark (año en curso)\nMS_CTR AS (\n  SELECT\n    CASE\n      WHEN LOWER(LINE_ITEM_NAME) LIKE '%tachado%'\n        OR LOWER(LINE_ITEM_NAME) LIKE '%celebrity%' THEN 'PRINCIPAL'\n      WHEN LOWER(LINE_ITEM_NAME) LIKE '%alta%'      THEN 'HIGH'\n      WHEN LOWER(LINE_ITEM_NAME) LIKE '%media%'     THEN 'MID'\n      ELSE 'OTHER'\n    END AS bucket,\n    SAFE_DIVIDE(SUM(CLICKS_QTY), NULLIF(SUM(IMPRESSION_VIEWS_QTY), 0)) AS ctr\n  FROM `meli-bi-data.WHOWNER.BT_ADS_DISP_METRICS_DAILY`\n  WHERE EVENT_LOCAL_DT BETWEEN '2026-01-01' AND CURRENT_DATE()\n    AND SIT_SITE_ID = 'MLA'\n    AND PLACEMENT LIKE '%MAIN-SLIDER%'\n    AND LINE_ITEM_NAME NOT LIKE '%SPLINTER%'\n    AND CAMPAIGN_NAME NOT LIKE '%FD%'\n  GROUP BY 1\n),\n\n-- 10. Targets finales por fecha\n--     Landing  : share_DOW × ts_sessions + funnel interno\n--     Container: avg_sessions directo + funnel interno\n--     cnt_nmv  : cnt_trx × $138\nTARGETS_BY_DATE AS (\n  SELECT\n    cd.date,\n    cd.dow,\n    COALESCE(ts_s.sessions, 0)                                                               AS ts_sessions,\n    COALESCE(ts_n.nmv,      0)                                                               AS ts_nmv,\n    -- Landing: share por DOW × sesiones planeadas\n    ROUND(COALESCE(ds.share, 0) * COALESCE(ts_s.sessions, 0))                               AS ldg_sessions,\n    ROUND(COALESCE(ds.share, 0) * COALESCE(ts_s.sessions, 0) * COALESCE(lf.f_usuarios, 0)) AS ldg_usuarios,\n    ROUND(COALESCE(ds.share, 0) * COALESCE(ts_s.sessions, 0) * COALESCE(lf.f_ses_cont, 0)) AS ldg_ses_cont,\n    ROUND(COALESCE(ds.share, 0) * COALESCE(ts_s.sessions, 0) * COALESCE(lf.f_ses_vip,  0)) AS ldg_ses_vip,\n    ROUND(COALESCE(ds.share, 0) * COALESCE(ts_s.sessions, 0) * COALESCE(lf.f_nsi,      0)) AS ldg_nsi,\n    ROUND(COALESCE(ds.share, 0) * COALESCE(ts_s.sessions, 0) * COALESCE(lf.f_trx,      0)) AS ldg_trx,\n    ROUND(COALESCE(ds.share, 0) * COALESCE(ts_s.sessions, 0) * COALESCE(lf.f_nmv,      0)) AS ldg_nmv,\n    -- Container: promedio directo + funnel interno\n    ROUND(COALESCE(cb.avg_sessions,             0))                                          AS cnt_sessions,\n    ROUND(COALESCE(cb.avg_sessions, 0) * COALESCE(cb.f_ses_vip, 0))                         AS cnt_ses_vip,\n    ROUND(COALESCE(cb.avg_sessions, 0) * COALESCE(cb.f_nsi,     0))                         AS cnt_nsi,\n    ROUND(COALESCE(cb.avg_sessions, 0) * COALESCE(cb.f_trx,     0))                         AS cnt_trx,\n    ROUND(COALESCE(cb.avg_sessions, 0) * COALESCE(cb.f_trx,     0) * 138.0)                 AS cnt_nmv\n  FROM CAMPAIGN_DATES cd\n  LEFT JOIN TS_SESSIONS        ts_s ON cd.date  = ts_s.date\n  LEFT JOIN TS_NMV              ts_n ON cd.date  = ts_n.date\n  LEFT JOIN DOW_SHARES          ds   ON cd.dow   = ds.dow\n  LEFT JOIN LANDING_FUNNEL      lf   ON cd.dow   = lf.dow\n  LEFT JOIN CONTAINER_BENCHMARK cb   ON cd.dow   = cb.dow\n)\n\nSELECT TO_BASE64(CAST(CONCAT(\n  '{\"dates\":',         (SELECT TO_JSON_STRING(ARRAY_AGG(CAST(date AS STRING) ORDER BY date)) FROM TARGETS_BY_DATE),\n  ',\"to_dates\":',      (SELECT TO_JSON_STRING(ARRAY_AGG(CAST(date AS STRING) ORDER BY date)) FROM TARGETS_BY_DATE),\n  ',\"ms\":{',\n    '\"ctr_all\":',        IFNULL(CAST((SELECT ROUND(SAFE_DIVIDE(SUM(CLICKS_QTY),NULLIF(SUM(IMPRESSION_VIEWS_QTY),0)),4) FROM `meli-bi-data.WHOWNER.BT_ADS_DISP_METRICS_DAILY` WHERE EVENT_LOCAL_DT BETWEEN '2026-01-01' AND CURRENT_DATE() AND SIT_SITE_ID = 'MLA' AND PLACEMENT LIKE '%MAIN-SLIDER%' AND LINE_ITEM_NAME NOT LIKE '%SPLINTER%' AND CAMPAIGN_NAME NOT LIKE '%FD%') AS STRING),'0'),\n    ',\"ctr_principal\":', CAST(COALESCE((SELECT ROUND(MAX(IF(bucket='PRINCIPAL',ctr,NULL)),4) FROM MS_CTR),0) AS STRING),\n    ',\"ctr_high\":',      CAST(COALESCE((SELECT ROUND(MAX(IF(bucket='HIGH',    ctr,NULL)),4) FROM MS_CTR),0) AS STRING),\n    ',\"ctr_mid\":',       CAST(COALESCE((SELECT ROUND(MAX(IF(bucket='MID',     ctr,NULL)),4) FROM MS_CTR),0) AS STRING),\n  '}',\n  ',\"total_site\":{\"sessions\":',   (SELECT TO_JSON_STRING(ARRAY_AGG(ROUND(ts_sessions,0) ORDER BY date)) FROM TARGETS_BY_DATE),\n    ',\"nmv\":',                    (SELECT TO_JSON_STRING(ARRAY_AGG(ROUND(ts_nmv,0)      ORDER BY date)) FROM TARGETS_BY_DATE),\n  '}',\n  ',\"landing\":{\"sessions\":',           (SELECT TO_JSON_STRING(ARRAY_AGG(ldg_sessions  ORDER BY date)) FROM TARGETS_BY_DATE),\n    ',\"share_sessions\":',               (SELECT TO_JSON_STRING(ARRAY_AGG(ROUND(SAFE_DIVIDE(CAST(ldg_sessions AS FLOAT64), NULLIF(ts_sessions,0)),6) ORDER BY date)) FROM TARGETS_BY_DATE),\n    ',\"ctr\":',                          (SELECT TO_JSON_STRING(ARRAY_AGG(ROUND(SAFE_DIVIDE(CAST(ldg_ses_cont AS FLOAT64), NULLIF(ldg_usuarios,0)),4) ORDER BY date)) FROM TARGETS_BY_DATE),\n    ',\"usuarios_landing\":',             (SELECT TO_JSON_STRING(ARRAY_AGG(ldg_usuarios  ORDER BY date)) FROM TARGETS_BY_DATE),\n    ',\"ses_contenedor\":',               (SELECT TO_JSON_STRING(ARRAY_AGG(ldg_ses_cont  ORDER BY date)) FROM TARGETS_BY_DATE),\n    ',\"ses_vip\":',                      (SELECT TO_JSON_STRING(ARRAY_AGG(ldg_ses_vip   ORDER BY date)) FROM TARGETS_BY_DATE),\n    ',\"nsi\":',                          (SELECT TO_JSON_STRING(ARRAY_AGG(ldg_nsi       ORDER BY date)) FROM TARGETS_BY_DATE),\n    ',\"transacciones\":',                (SELECT TO_JSON_STRING(ARRAY_AGG(ldg_trx       ORDER BY date)) FROM TARGETS_BY_DATE),\n    ',\"nmv\":',                          (SELECT TO_JSON_STRING(ARRAY_AGG(ldg_nmv       ORDER BY date)) FROM TARGETS_BY_DATE),\n  '}',\n  ',\"container\":{\"sessions\":',         (SELECT TO_JSON_STRING(ARRAY_AGG(cnt_sessions  ORDER BY date)) FROM TARGETS_BY_DATE),\n    ',\"nmv\":',                          (SELECT TO_JSON_STRING(ARRAY_AGG(cnt_nmv       ORDER BY date)) FROM TARGETS_BY_DATE),\n    ',\"share_nmv\":',                    (SELECT TO_JSON_STRING(ARRAY_AGG(ROUND(SAFE_DIVIDE(CAST(cnt_nmv AS FLOAT64), NULLIF(ts_nmv,0)),6) ORDER BY date)) FROM TARGETS_BY_DATE),\n    ',\"share_sessions\":',               (SELECT TO_JSON_STRING(ARRAY_AGG(ROUND(SAFE_DIVIDE(CAST(cnt_sessions AS FLOAT64), NULLIF(ts_sessions,0)),6) ORDER BY date)) FROM TARGETS_BY_DATE),\n    ',\"cvr\":',                          (SELECT TO_JSON_STRING(ARRAY_AGG(ROUND(SAFE_DIVIDE(CAST(cnt_trx AS FLOAT64), NULLIF(cnt_sessions,0)),4) ORDER BY date)) FROM TARGETS_BY_DATE),\n    ',\"ses_vip\":',                      (SELECT TO_JSON_STRING(ARRAY_AGG(cnt_ses_vip   ORDER BY date)) FROM TARGETS_BY_DATE),\n    ',\"nsi\":',                          (SELECT TO_JSON_STRING(ARRAY_AGG(cnt_nsi       ORDER BY date)) FROM TARGETS_BY_DATE),\n    ',\"transacciones\":',                (SELECT TO_JSON_STRING(ARRAY_AGG(cnt_trx       ORDER BY date)) FROM TARGETS_BY_DATE),\n  '}',\n  ',\"nasp\":138.0',\n  ',\"refreshed_at\":\"', FORMAT_TIMESTAMP('%Y-%m-%dT%H:%M:%S', CURRENT_TIMESTAMP(), 'America/Argentina/Buenos_Aires'), '\"}'\n) AS BYTES)) AS data_b64",
+        "options": {
+          "location": "US"
+        }
+      },
+      "id": "bq-targets-t1",
+      "name": "BQ Targets T1",
+      "type": "n8n-nodes-base.googleBigQuery",
+      "position": [
+        340,
+        80
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "url": "https://api.github.com/repos/josefinaquirno/campaign_tracker/contents/docs/targets_t1.json",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer TU_GITHUB_TOKEN_ACA"
+            },
+            {
+              "name": "User-Agent",
+              "value": "verdi-flow"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-sha-t1",
+      "name": "Get SHA T1",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        520,
+        80
+      ],
+      "typeVersion": 4.2,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "https://api.github.com/repos/josefinaquirno/campaign_tracker/contents/docs/targets_t1.json",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer TU_GITHUB_TOKEN_ACA"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "User-Agent",
+              "value": "verdi-flow"
+            }
+          ]
+        },
+        "options": {},
+        "specifyBody": "json",
+        "jsonBody": "={{ (() => { const sha = $('Get SHA T1').first().json?.sha; const body = {   message: 'chore: refresh targets_t1.json [skip ci]',   content: $('BQ Targets T1').first().json.data_b64.replace(/\\n/g,'').replace(/\\r/g,'') }; if (sha) body.sha = sha; return JSON.stringify(body); })() }}"
+      },
+      "id": "push-targets-t1",
+      "name": "Push T1 to GitHub",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        700,
+        80
+      ],
+      "typeVersion": 4.2
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "BQ Targets T1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "BQ Targets T1": {
+      "main": [
+        [
+          {
+            "node": "Get SHA T1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get SHA T1": {
+      "main": [
+        [
+          {
+            "node": "Push T1 to GitHub",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
 }
