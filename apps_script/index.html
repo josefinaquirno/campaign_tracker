@@ -449,6 +449,10 @@
         <input id="st-search" type="text" placeholder="Filtrar término..." oninput="renderSearchTerms()"
           style="background:#1a1a2e;color:#fff;border:1px solid #333;border-radius:6px;padding:4px 10px;font-size:12px;width:180px;">
       </div>
+      <div id="st-chart-wrap" style="background:#12122a;border-radius:8px;padding:16px;margin-bottom:16px;display:none;">
+        <div style="font-size:11px;font-weight:600;color:#aaa;letter-spacing:1px;margin-bottom:12px;">TOP 10 · BÚSQUEDAS</div>
+        <div style="position:relative;height:280px;"><canvas id="stBarChart" role="img" aria-label="Top 10 términos de búsqueda por volumen"></canvas></div>
+      </div>
       <div id="st-content"><p style="color:#aaa;font-size:13px;padding:20px 0">Cargando...</p></div>
     </div>
 
@@ -722,14 +726,17 @@ function renderAll(){
 // ──────────────────────────────────────────────
 // SEARCH TERMS
 // ──────────────────────────────────────────────
+var _stBarChart = null;
 function renderSearchTerms(){
   var el = document.getElementById('st-content'); if(!el) return;
+  var wrap = document.getElementById('st-chart-wrap');
   var rows = ST.search_terms || [];
   if(!rows.length){
+    if(wrap) wrap.style.display='none';
     el.innerHTML='<p style="color:#aaa;font-size:13px;padding:20px 0">Sin datos — importar y correr verdi_search_terms.json para generar search_terms.json</p>';
     return;
   }
-  var dateFilter  = (document.getElementById('st-date-filter')  || {}).value || 'ALL';
+  var dateFilter   = (document.getElementById('st-date-filter')  || {}).value || 'ALL';
   var searchFilter = ((document.getElementById('st-search') || {}).value || '').toLowerCase().trim();
 
   var filtered = rows.filter(function(r){
@@ -738,7 +745,6 @@ function renderSearchTerms(){
     return true;
   });
 
-  // Agrupar por query si se filtra por todos los días
   var aggregated;
   if(dateFilter === 'ALL'){
     var map = {};
@@ -747,7 +753,7 @@ function renderSearchTerms(){
       if(!map[k]) map[k] = {query:r.query, domain:r.domain, searches:0, searches_vip:0, gmv:0, orders:0, si:0, buyers:0, trx:0};
       map[k].searches     += r.searches || 0;
       map[k].searches_vip += r.searches_vip || 0;
-      map[k].gmv          += r.gmv || 0;
+      map[k].gmv          += parseFloat(r.gmv) || 0;
       map[k].orders       += r.orders || 0;
       map[k].si           += r.si || 0;
       map[k].buyers       += r.buyers || 0;
@@ -762,29 +768,124 @@ function renderSearchTerms(){
     aggregated = filtered.sort(function(a,b){return b.searches - a.searches;}).slice(0, 100);
   }
 
+  // ── CHART TOP 10 ─────────────────────────────────────────────────────────
+  var top10 = aggregated.slice(0, 10);
+  if(wrap && top10.length){
+    wrap.style.display = 'block';
+    var labels = top10.map(function(r){ return r.query; }).reverse();
+    var values = top10.map(function(r){ return r.searches; }).reverse();
+    var cvrs   = top10.map(function(r){ return r.cvr; }).reverse();
+    var maxVal = Math.max.apply(null, values);
+
+    if(_stBarChart){ _stBarChart.destroy(); _stBarChart = null; }
+    var ctx = document.getElementById('stBarChart').getContext('2d');
+    _stBarChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [{
+          data: values,
+          backgroundColor: '#FFE600',
+          borderRadius: 4,
+          borderSkipped: false,
+          barPercentage: 0.65
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: function(ctx){
+                var i = ctx.dataIndex;
+                var cvr = (cvrs[i]*100).toFixed(2);
+                return ' ' + ctx.parsed.x.toLocaleString('es-AR') + ' búsquedas  ·  CVR ' + cvr + '%';
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { color: 'rgba(255,255,255,0.05)' },
+            ticks: { color: '#666', font: { size: 11 }, callback: function(v){ return v>=1000?(v/1000).toFixed(0)+'K':v; } },
+            border: { display: false }
+          },
+          y: {
+            grid: { display: false },
+            ticks: { color: '#ccc', font: { size: 11 } },
+            border: { display: false }
+          }
+        },
+        layout: { padding: { right: 8 } },
+        animation: { duration: 400 }
+      },
+      plugins: [{
+        id: 'valueLabels',
+        afterDatasetsDraw: function(chart){
+          var ctx2 = chart.ctx;
+          chart.getDatasetMeta(0).data.forEach(function(bar, i){
+            var v = values[i];
+            var label = v >= 1000 ? (v/1000).toFixed(1)+'K' : v;
+            var cvr = (cvrs[i]*100).toFixed(2)+'%';
+            ctx2.save();
+            ctx2.fillStyle = '#FFE600';
+            ctx2.font = '600 11px sans-serif';
+            ctx2.textAlign = 'left';
+            ctx2.textBaseline = 'middle';
+            ctx2.fillText(label, bar.x + 6, bar.y);
+            ctx2.fillStyle = '#888';
+            ctx2.font = '11px sans-serif';
+            ctx2.fillText('CVR ' + cvr, bar.x + 6 + ctx2.measureText(label).width + 8, bar.y);
+            ctx2.restore();
+          });
+        }
+      }]
+    });
+  }
+
+  // ── TABLA ────────────────────────────────────────────────────────────────
   var html = '<table style="width:100%;border-collapse:collapse;font-size:12px;">'
-    + '<thead><tr style="border-bottom:1px solid #333;color:#aaa;">'
-    + '<th style="text-align:left;padding:6px 8px;">#</th>'
-    + '<th style="text-align:left;padding:6px 8px;">Query</th>'
-    + '<th style="text-align:left;padding:6px 8px;">Dominio</th>'
-    + '<th style="text-align:right;padding:6px 8px;">Búsquedas</th>'
-    + '<th style="text-align:right;padding:6px 8px;">VIP</th>'
-    + '<th style="text-align:right;padding:6px 8px;">CTR</th>'
-    + '<th style="text-align:right;padding:6px 8px;">CVR</th>'
-    + '<th style="text-align:right;padding:6px 8px;">GMV 24hs</th>'
+    + '<thead><tr style="border-bottom:1px solid #2a2a4a;">'
+    + '<th style="text-align:left;padding:7px 8px;color:#666;font-weight:500;font-size:11px;">#</th>'
+    + '<th style="text-align:left;padding:7px 8px;color:#666;font-weight:500;font-size:11px;">Término</th>'
+    + '<th style="text-align:left;padding:7px 8px;color:#666;font-weight:500;font-size:11px;">Dominio</th>'
+    + '<th style="text-align:right;padding:7px 8px;color:#666;font-weight:500;font-size:11px;">Búsquedas</th>'
+    + '<th style="text-align:right;padding:7px 8px;color:#666;font-weight:500;font-size:11px;">VIP</th>'
+    + '<th style="text-align:right;padding:7px 8px;color:#666;font-weight:500;font-size:11px;">CTR</th>'
+    + '<th style="text-align:right;padding:7px 8px;color:#666;font-weight:500;font-size:11px;">CVR</th>'
+    + '<th style="text-align:right;padding:7px 8px;color:#666;font-weight:500;font-size:11px;">GMV 24hs</th>'
     + '</tr></thead><tbody>';
 
   aggregated.forEach(function(r, i){
-    var bg = i%2===0 ? 'rgba(255,255,255,0.02)' : 'transparent';
-    html += '<tr style="background:'+bg+';border-bottom:1px solid #1a1a2e;">'
-      + '<td style="padding:5px 8px;color:#666;">'+(i+1)+'</td>'
-      + '<td style="padding:5px 8px;font-weight:500;color:#fff;">'+r.query+'</td>'
-      + '<td style="padding:5px 8px;color:#aaa;font-size:11px;">'+r.domain+'</td>'
-      + '<td style="padding:5px 8px;text-align:right;">'+fNum(r.searches)+'</td>'
-      + '<td style="padding:5px 8px;text-align:right;">'+fNum(r.searches_vip)+'</td>'
-      + '<td style="padding:5px 8px;text-align:right;color:#ffe600;">'+fPct(r.ctr)+'</td>'
-      + '<td style="padding:5px 8px;text-align:right;">'+fPct(r.cvr)+'</td>'
-      + '<td style="padding:5px 8px;text-align:right;">'+fNMV(r.gmv)+'</td>'
+    var isTop = i < 10;
+    var bg = i%2===0 ? 'rgba(255,255,255,0.025)' : 'transparent';
+    var rankStyle = isTop
+      ? 'background:#ffe600;color:#1a1a2e;border-radius:4px;padding:1px 5px;font-size:10px;font-weight:700;'
+      : 'color:#555;font-size:11px;';
+
+    // CVR color scale
+    var cvrVal = r.cvr * 100;
+    var cvrColor = cvrVal >= 4 ? '#2DC653' : cvrVal >= 2 ? '#ffe600' : '#ccc';
+
+    // Búsquedas bar
+    var barPct = maxVal > 0 ? Math.round(r.searches / maxVal * 100) : 0;
+    var barHtml = '<div style="display:flex;align-items:center;gap:6px;justify-content:flex-end;">'
+      + '<div style="width:60px;height:4px;background:#1a1a2e;border-radius:2px;overflow:hidden;">'
+      + '<div style="width:'+barPct+'%;height:100%;background:#ffe600;border-radius:2px;"></div></div>'
+      + '<span>'+fNum(r.searches)+'</span></div>';
+
+    html += '<tr style="background:'+bg+';border-bottom:1px solid rgba(255,255,255,0.04);">'
+      + '<td style="padding:6px 8px;"><span style="'+rankStyle+'">'+(i+1)+'</span></td>'
+      + '<td style="padding:6px 8px;font-weight:500;color:#fff;">'+r.query+'</td>'
+      + '<td style="padding:6px 8px;color:#666;font-size:11px;">'+r.domain+'</td>'
+      + '<td style="padding:6px 8px;">'+barHtml+'</td>'
+      + '<td style="padding:6px 8px;text-align:right;color:#aaa;">'+fNum(r.searches_vip)+'</td>'
+      + '<td style="padding:6px 8px;text-align:right;color:#ffe600;">'+fPct(r.ctr)+'</td>'
+      + '<td style="padding:6px 8px;text-align:right;color:'+cvrColor+';font-weight:500;">'+fPct(r.cvr)+'</td>'
+      + '<td style="padding:6px 8px;text-align:right;color:#aaa;">'+fNMV(r.gmv)+'</td>'
       + '</tr>';
   });
   html += '</tbody></table>';
