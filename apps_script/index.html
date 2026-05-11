@@ -1412,33 +1412,35 @@ function renderMS(){
     }
   });
 
-  // Table by bucket (grouped, with drill-down per LI)
-  var liMap = {};
+  // Table by bucket → campaign_name (with drill-down per campaign)
+  var campMap={};
   filtered.forEach(function(r){
-    var k=r.line_item;
-    if(!liMap[k]) liMap[k]={name:k,bucket:getBucket(r.line_item),clicks:0,prints:0};
-    liMap[k].clicks+=+r.clicks||0; liMap[k].prints+=+r.prints||0;
+    var camp=r.campaign_name||r.line_item;
+    var b=getBucket(r.line_item);
+    if(!campMap[camp]) campMap[camp]={name:camp,bucket:b,clicks:0,prints:0,lis:{}};
+    campMap[camp].clicks+=+r.clicks||0; campMap[camp].prints+=+r.prints||0;
+    campMap[camp].lis[r.line_item]=1;
   });
-  var lis = Object.values(liMap);
-  lis.forEach(function(li){ li.ctr=li.prints>0?li.clicks/li.prints:0; });
-  document.getElementById('ms-tbl-badge').textContent = lis.length+' line items';
+  var camps=Object.values(campMap);
+  camps.forEach(function(c){ c.ctr=c.prints>0?c.clicks/c.prints:0; c.liCount=Object.keys(c.lis).length; });
+  document.getElementById('ms-tbl-badge').textContent = camps.length+' campañas';
 
   // Agrupar por bucket
   var BUCKET_ORDER=['PRINCIPAL','HIGH','MID','OTHER'];
   var BUCKET_COLOR={'PRINCIPAL':'#1a1a2e','HIGH':'#4caf50','MID':'#FF9800','OTHER':'#aaa'};
   var bucketMap={};
-  lis.forEach(function(li){
-    var b=li.bucket;
-    if(!bucketMap[b]) bucketMap[b]={clicks:0,prints:0,lis:[]};
-    bucketMap[b].clicks+=li.clicks; bucketMap[b].prints+=li.prints;
-    bucketMap[b].lis.push(li);
+  camps.forEach(function(c){
+    var b=c.bucket;
+    if(!bucketMap[b]) bucketMap[b]={clicks:0,prints:0,camps:[]};
+    bucketMap[b].clicks+=c.clicks; bucketMap[b].prints+=c.prints;
+    bucketMap[b].camps.push(c);
   });
   BUCKET_ORDER.forEach(function(b){
-    if(bucketMap[b]) bucketMap[b].lis.sort(function(a,c){return c.clicks-a.clicks;});
+    if(bucketMap[b]) bucketMap[b].camps.sort(function(a,c){return c.clicks-a.clicks;});
   });
 
   var h='<table><thead><tr>'
-    +'<th>Bucket</th>'
+    +'<th>Bucket / Campaña</th>'
     +'<th style="text-align:right">Clicks</th>'
     +'<th style="text-align:right">Prints</th>'
     +'<th style="text-align:right">CTR</th>'
@@ -1451,7 +1453,7 @@ function renderMS(){
     var chip='<span style="background:'+(BUCKET_COLOR[b]||'#aaa')+';color:#fff;padding:2px 8px;border-radius:3px;font-size:10px;font-weight:700">'+b+'</span>';
     h+='<tr style="cursor:pointer;background:#f8f8f8;border-top:2px solid '+(BUCKET_COLOR[b]||'#aaa')+'" onclick="toggleMSBucket(\''+b+'\')">'
       +'<td style="padding:9px 10px;font-weight:700">'+chip
-      +' <span style="font-size:10px;color:#888;margin-left:6px">'+bg.lis.length+' LIs</span>'
+      +' <span style="font-size:10px;color:#888;margin-left:6px">'+bg.camps.length+' campañas</span>'
       +' <span style="font-size:10px;color:#888;float:right">'+(isOpen?'▲':'▼')+'</span>'
       +'</td>'
       +'<td style="text-align:right;padding:9px 10px;font-weight:700">'+fNum(bg.clicks)+'</td>'
@@ -1459,12 +1461,14 @@ function renderMS(){
       +'<td style="text-align:right;padding:9px 10px;font-weight:700">'+fPct(bCtr,2)+'</td>'
       +'</tr>';
     if(isOpen){
-      bg.lis.forEach(function(li){
+      bg.camps.forEach(function(c){
         h+='<tr style="background:#fafafa">'
-          +'<td style="padding:7px 10px 7px 28px;color:#555;font-size:11px">'+li.name+'</td>'
-          +'<td style="text-align:right;padding:7px 10px;font-size:11px">'+fNum(li.clicks)+'</td>'
-          +'<td style="text-align:right;padding:7px 10px;font-size:11px">'+fNum(li.prints)+'</td>'
-          +'<td style="text-align:right;padding:7px 10px;font-size:11px">'+fPct(li.ctr,2)+'</td>'
+          +'<td style="padding:7px 10px 7px 28px;color:#555;font-size:11px">'+c.name
+          +' <span style="color:#bbb;font-size:10px;margin-left:4px">'+c.liCount+' LIs</span>'
+          +'</td>'
+          +'<td style="text-align:right;padding:7px 10px;font-size:11px">'+fNum(c.clicks)+'</td>'
+          +'<td style="text-align:right;padding:7px 10px;font-size:11px">'+fNum(c.prints)+'</td>'
+          +'<td style="text-align:right;padding:7px 10px;font-size:11px">'+fPct(c.ctr,2)+'</td>'
           +'</tr>';
       });
     }
