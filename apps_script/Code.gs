@@ -95,6 +95,19 @@ function getOptLandingData() {
   }
 }
 
+function getSearchTermsData(searchTermsFile) {
+  function decodeB64Json(raw) {
+    try { return JSON.parse(Utilities.newBlob(Utilities.base64Decode(JSON.parse(raw))).getDataAsString()); }
+    catch(e) { return JSON.parse(raw); }
+  }
+  try {
+    var url = GITHUB_RAW_BASE + (searchTermsFile || 'search_terms.json') + '?v=' + Date.now();
+    return decodeB64Json(UrlFetchApp.fetch(url).getContentText());
+  } catch(e) {
+    return { dates: [], search_terms: [], refreshed_at: '' };
+  }
+}
+
 function getHistoricalData() {
   try {
     var response = UrlFetchApp.fetch(GITHUB_RAW_URL_HISTORICAL + '?v=' + Date.now());

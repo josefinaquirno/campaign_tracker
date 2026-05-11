@@ -234,6 +234,7 @@
   <button class="tab-btn" onclick="switchTab('calidad-oferta',this)">Oferta</button>
   <button class="tab-btn" onclick="switchTab('calidad-containers',this)">Calidad Containers</button>
   <button class="tab-btn" onclick="switchTab('opt-landing',this)">Optimización de Landing</button>
+  <button class="tab-btn" onclick="switchTab('search-terms',this)">Search Terms</button>
 </div>
 
 <!-- COMPARISON BAR -->
@@ -438,6 +439,19 @@
       <div id="opt-landing-content"><p style="color:#aaa;font-size:13px;padding:20px 0">Cargando...</p></div>
     </div>
 
+<!-- ==================== SEARCH TERMS TAB ==================== -->
+    <div class="tab-panel" id="panel-search-terms">
+      <div class="section-label">SEARCH TERMS <span id="st-refreshed" style="font-size:10px;font-weight:400;color:#aaa;margin-left:8px;"></span></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 12px;">
+        <select id="st-date-filter" onchange="renderSearchTerms()" style="background:#1a1a2e;color:#fff;border:1px solid #333;border-radius:6px;padding:4px 10px;font-size:12px;">
+          <option value="ALL">Todos los días</option>
+        </select>
+        <input id="st-search" type="text" placeholder="Filtrar término..." oninput="renderSearchTerms()"
+          style="background:#1a1a2e;color:#fff;border:1px solid #333;border-radius:6px;padding:4px 10px;font-size:12px;width:180px;">
+      </div>
+      <div id="st-content"><p style="color:#aaa;font-size:13px;padding:20px 0">Cargando...</p></div>
+    </div>
+
   </div><!-- /content -->
 </div><!-- /main -->
 
@@ -454,6 +468,7 @@ var OPT = { opt_landing: [], refreshed_at: '' };
 var OPT_LDG_FILTER = 'ALL';
 var OPT_GROUP_FILTER = 'TODOS';
 var TO_FILTER = 'ALL'; // 'ALL' | 'NO_TO'
+var ST = { dates: [], search_terms: [], refreshed_at: '' };
 // Multi-campaign state
 var CAMPAIGNS = [];
 var ACTIVE_CAMPAIGN = null;
@@ -497,6 +512,13 @@ function _loadCampaignData(camp){
       .withSuccessHandler(function(o){initOptLanding(o);})
       .withFailureHandler(function(){})
       .getOptLandingData();
+    var stf = ACTIVE_CAMPAIGN && ACTIVE_CAMPAIGN.search_terms_file;
+    if(stf) {
+      google.script.run
+        .withSuccessHandler(function(s){initSearchTerms(s);})
+        .withFailureHandler(function(){})
+        .getSearchTermsData(stf);
+    }
   } else {
     fetch((df||'data.json')+'?v='+Date.now())
       .then(function(r){return r.json();}).then(function(d){init(d);})
@@ -626,6 +648,25 @@ function initOptLanding(o){
   if(ACTIVE_TAB==='opt-landing') renderOptLanding();
 }
 
+function initSearchTerms(s){
+  ST = s || { dates: [], search_terms: [], refreshed_at: '' };
+  // Poblar selector de fechas
+  var sel = document.getElementById('st-date-filter');
+  if(sel && ST.dates && ST.dates.length){
+    var existing = Array.from(sel.options).map(function(o){return o.value;});
+    ST.dates.forEach(function(d){
+      if(existing.indexOf(d) < 0){
+        var opt = document.createElement('option');
+        opt.value = d; opt.textContent = d;
+        sel.appendChild(opt);
+      }
+    });
+  }
+  var ref = document.getElementById('st-refreshed');
+  if(ref) ref.textContent = ST.refreshed_at ? 'ACT: '+ST.refreshed_at.slice(0,10) : '';
+  if(ACTIVE_TAB==='search-terms') renderSearchTerms();
+}
+
 function init(d){
   D = d;
   document.getElementById('loading').style.display='none';
@@ -675,6 +716,79 @@ function renderAll(){
   if(ACTIVE_TAB==='calidad-oferta')       renderCalidadOferta();
   if(ACTIVE_TAB==='calidad-containers')   renderCalidadContainers();
   if(ACTIVE_TAB==='opt-landing')          renderOptLanding();
+  if(ACTIVE_TAB==='search-terms')         renderSearchTerms();
+}
+
+// ──────────────────────────────────────────────
+// SEARCH TERMS
+// ──────────────────────────────────────────────
+function renderSearchTerms(){
+  var el = document.getElementById('st-content'); if(!el) return;
+  var rows = ST.search_terms || [];
+  if(!rows.length){
+    el.innerHTML='<p style="color:#aaa;font-size:13px;padding:20px 0">Sin datos — importar y correr verdi_search_terms.json para generar search_terms.json</p>';
+    return;
+  }
+  var dateFilter  = (document.getElementById('st-date-filter')  || {}).value || 'ALL';
+  var searchFilter = ((document.getElementById('st-search') || {}).value || '').toLowerCase().trim();
+
+  var filtered = rows.filter(function(r){
+    if(dateFilter !== 'ALL' && r.date !== dateFilter) return false;
+    if(searchFilter && r.query.indexOf(searchFilter) < 0) return false;
+    return true;
+  });
+
+  // Agrupar por query si se filtra por todos los días
+  var aggregated;
+  if(dateFilter === 'ALL'){
+    var map = {};
+    filtered.forEach(function(r){
+      var k = r.query;
+      if(!map[k]) map[k] = {query:r.query, domain:r.domain, searches:0, searches_vip:0, gmv:0, orders:0, si:0, buyers:0, trx:0};
+      map[k].searches     += r.searches || 0;
+      map[k].searches_vip += r.searches_vip || 0;
+      map[k].gmv          += r.gmv || 0;
+      map[k].orders       += r.orders || 0;
+      map[k].si           += r.si || 0;
+      map[k].buyers       += r.buyers || 0;
+      map[k].trx          += r.trx || 0;
+    });
+    aggregated = Object.values(map).map(function(r){
+      r.ctr = r.searches > 0 ? r.searches_vip / r.searches : 0;
+      r.cvr = r.searches > 0 ? r.buyers / r.searches : 0;
+      return r;
+    }).sort(function(a,b){return b.searches - a.searches;}).slice(0, 100);
+  } else {
+    aggregated = filtered.sort(function(a,b){return b.searches - a.searches;}).slice(0, 100);
+  }
+
+  var html = '<table style="width:100%;border-collapse:collapse;font-size:12px;">'
+    + '<thead><tr style="border-bottom:1px solid #333;color:#aaa;">'
+    + '<th style="text-align:left;padding:6px 8px;">#</th>'
+    + '<th style="text-align:left;padding:6px 8px;">Query</th>'
+    + '<th style="text-align:left;padding:6px 8px;">Dominio</th>'
+    + '<th style="text-align:right;padding:6px 8px;">Búsquedas</th>'
+    + '<th style="text-align:right;padding:6px 8px;">VIP</th>'
+    + '<th style="text-align:right;padding:6px 8px;">CTR</th>'
+    + '<th style="text-align:right;padding:6px 8px;">CVR</th>'
+    + '<th style="text-align:right;padding:6px 8px;">GMV 24hs</th>'
+    + '</tr></thead><tbody>';
+
+  aggregated.forEach(function(r, i){
+    var bg = i%2===0 ? 'rgba(255,255,255,0.02)' : 'transparent';
+    html += '<tr style="background:'+bg+';border-bottom:1px solid #1a1a2e;">'
+      + '<td style="padding:5px 8px;color:#666;">'+(i+1)+'</td>'
+      + '<td style="padding:5px 8px;font-weight:500;color:#fff;">'+r.query+'</td>'
+      + '<td style="padding:5px 8px;color:#aaa;font-size:11px;">'+r.domain+'</td>'
+      + '<td style="padding:5px 8px;text-align:right;">'+fNum(r.searches)+'</td>'
+      + '<td style="padding:5px 8px;text-align:right;">'+fNum(r.searches_vip)+'</td>'
+      + '<td style="padding:5px 8px;text-align:right;color:#ffe600;">'+fPct(r.ctr)+'</td>'
+      + '<td style="padding:5px 8px;text-align:right;">'+fPct(r.cvr)+'</td>'
+      + '<td style="padding:5px 8px;text-align:right;">'+fNMV(r.gmv)+'</td>'
+      + '</tr>';
+  });
+  html += '</tbody></table>';
+  el.innerHTML = html;
 }
 
 // ──────────────────────────────────────────────

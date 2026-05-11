@@ -1,0 +1,121 @@
+{
+  "name": "Search Terms HOT SALE 2026",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * *"
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger-st",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "position": [160, 80],
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {
+        "projectId": "meli-bi-data",
+        "sqlQuery": "SELECT TO_BASE64(CAST(\n  CONCAT(\n    '{\"dates\":[',\n    (SELECT STRING_AGG(CONCAT('\"', CAST(d AS STRING), '\"') ORDER BY d)\n     FROM UNNEST(GENERATE_DATE_ARRAY(DATE '2026-05-11', DATE '2026-05-18', INTERVAL 1 DAY)) AS d),\n    '],\"search_terms\":',\n    (\n      SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(\n        CAST(DATE AS STRING)                                          AS date,\n        LOWER(QUERY)                                                  AS query,\n        CASE WHEN DOM_DOMAIN_ID != 'not set'\n             THEN SUBSTR(DOM_DOMAIN_ID, 5, 20)\n             ELSE 'not set' END                                       AS domain,\n        COALESCE(SUM(SEARCHS), 0)                                     AS searches,\n        COALESCE(SUM(SEARCHSWVIP), 0)                                 AS searches_vip,\n        MAX(RESULTS)                                                   AS max_results,\n        ROUND(SAFE_DIVIDE(COALESCE(SUM(SEARCHSWVIP), 0),\n                          COALESCE(SUM(SEARCHS), 0)), 4)              AS ctr,\n        ROUND(SAFE_DIVIDE(COALESCE(SUM(UNIQUEBUYERS_STRICT_24hr), 0),\n                          COALESCE(SUM(SEARCHS), 0)), 4)              AS cvr,\n        COALESCE(SUM(ORDERS_STRICT_24hr), 0)                          AS orders,\n        COALESCE(SUM(TRX_STRICT_24hr), 0)                             AS trx,\n        ROUND(COALESCE(SUM(GMV_STRICT_24hr), 0), 2)                   AS gmv,\n        COALESCE(SUM(SI_STRICT_24hr), 0)                              AS si,\n        COALESCE(SUM(UNIQUEBUYERS_STRICT_24hr), 0)                    AS buyers\n      ) ORDER BY SUM(SEARCHS) DESC)\n      FROM `meli-bi-data.WHOWNER.DM_SEARCHTERMS`\n      WHERE DATE BETWEEN DATE '2026-05-11' AND DATE '2026-05-18'\n        AND SIT_SITE_ID = 'MLA'\n        AND PLATFORM IN ('/mobile/android', '/mobile/ios')\n        AND LENGTH(LOWER(QUERY)) > 0\n        AND LOWER(QUERY) IS NOT NULL\n      GROUP BY DATE, LOWER(QUERY), DOM_DOMAIN_ID\n    ),\n    ',\"refreshed_at\":\"',\n    FORMAT_TIMESTAMP('%Y-%m-%dT%H:%M:%S', CURRENT_TIMESTAMP(), 'America/Argentina/Buenos_Aires'),\n    '\"}'\n  )\nAS BYTES)) AS data_b64",
+        "options": {
+          "location": "US"
+        }
+      },
+      "id": "bq-search-terms",
+      "name": "BQ Search Terms",
+      "type": "n8n-nodes-base.googleBigQuery",
+      "position": [340, 80],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "url": "https://api.github.com/repos/josefinaquirno/campaign_tracker/contents/docs/search_terms.json",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer TU_GITHUB_TOKEN_ACA"
+            },
+            {
+              "name": "User-Agent",
+              "value": "verdi-flow"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-sha-st",
+      "name": "Get SHA Search Terms",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [520, 80],
+      "typeVersion": 4.2,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "https://api.github.com/repos/josefinaquirno/campaign_tracker/contents/docs/search_terms.json",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer TU_GITHUB_TOKEN_ACA"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "User-Agent",
+              "value": "verdi-flow"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "message",
+              "value": "chore: refresh search_terms.json [skip ci]"
+            },
+            {
+              "name": "content",
+              "value": "={{ $('BQ Search Terms').first().json.data_b64.replace(/\\n/g, '').replace(/\\r/g, '') }}"
+            },
+            {
+              "name": "sha",
+              "value": "={{ $('Get SHA Search Terms').first().json.sha }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "push-search-terms",
+      "name": "Push Search Terms to GitHub",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [700, 80],
+      "typeVersion": 4.2
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [[{"node": "BQ Search Terms", "type": "main", "index": 0}]]
+    },
+    "BQ Search Terms": {
+      "main": [[{"node": "Get SHA Search Terms", "type": "main", "index": 0}]]
+    },
+    "Get SHA Search Terms": {
+      "main": [[{"node": "Push Search Terms to GitHub", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {"executionOrder": "v1"},
+  "pinData": {}
+}
