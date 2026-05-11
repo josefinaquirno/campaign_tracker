@@ -1,4 +1,4 @@
-{
+﻿{
     "name":  "Campaign Tracker â€” Daily Refresh",
     "nodes":  [
                   {
@@ -161,4 +161,4 @@
     "settings":  {
                      "executionOrder":  "v1"
                  }
-}                                                       
+}
