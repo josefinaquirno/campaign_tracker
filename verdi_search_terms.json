@@ -15,13 +15,16 @@
       "id": "schedule-trigger-st",
       "name": "Schedule Trigger",
       "type": "n8n-nodes-base.scheduleTrigger",
-      "position": [160, 80],
+      "position": [
+        160,
+        80
+      ],
       "typeVersion": 1.2
     },
     {
       "parameters": {
         "projectId": "meli-bi-data",
-        "sqlQuery": "SELECT TO_BASE64(CAST(\n  CONCAT(\n    '{\"dates\":[',\n    (SELECT STRING_AGG(CONCAT('\"', CAST(d AS STRING), '\"') ORDER BY d)\n     FROM UNNEST(GENERATE_DATE_ARRAY(DATE '2026-05-11', DATE '2026-05-18', INTERVAL 1 DAY)) AS d),\n    '],\"search_terms\":',\n    (\n      SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(\n        CAST(DATE AS STRING)                                          AS date,\n        LOWER(QUERY)                                                  AS query,\n        CASE WHEN DOM_DOMAIN_ID != 'not set'\n             THEN SUBSTR(DOM_DOMAIN_ID, 5, 20)\n             ELSE 'not set' END                                       AS domain,\n        COALESCE(SUM(SEARCHS), 0)                                     AS searches,\n        COALESCE(SUM(SEARCHSWVIP), 0)                                 AS searches_vip,\n        MAX(RESULTS)                                                   AS max_results,\n        ROUND(SAFE_DIVIDE(COALESCE(SUM(SEARCHSWVIP), 0),\n                          COALESCE(SUM(SEARCHS), 0)), 4)              AS ctr,\n        ROUND(SAFE_DIVIDE(COALESCE(SUM(UNIQUEBUYERS_STRICT_24hr), 0),\n                          COALESCE(SUM(SEARCHS), 0)), 4)              AS cvr,\n        COALESCE(SUM(ORDERS_STRICT_24hr), 0)                          AS orders,\n        COALESCE(SUM(TRX_STRICT_24hr), 0)                             AS trx,\n        ROUND(COALESCE(SUM(GMV_STRICT_24hr), 0), 2)                   AS gmv,\n        COALESCE(SUM(SI_STRICT_24hr), 0)                              AS si,\n        COALESCE(SUM(UNIQUEBUYERS_STRICT_24hr), 0)                    AS buyers\n      ) ORDER BY SUM(SEARCHS) DESC)\n      FROM `meli-bi-data.WHOWNER.DM_SEARCHTERMS`\n      WHERE DATE BETWEEN DATE '2026-05-11' AND DATE '2026-05-18'\n        AND SIT_SITE_ID = 'MLA'\n        AND PLATFORM IN ('/mobile/android', '/mobile/ios')\n        AND LENGTH(LOWER(QUERY)) > 0\n        AND LOWER(QUERY) IS NOT NULL\n      GROUP BY DATE, LOWER(QUERY), DOM_DOMAIN_ID\n    ),\n    ',\"refreshed_at\":\"',\n    FORMAT_TIMESTAMP('%Y-%m-%dT%H:%M:%S', CURRENT_TIMESTAMP(), 'America/Argentina/Buenos_Aires'),\n    '\"}'\n  )\nAS BYTES)) AS data_b64",
+        "sqlQuery": "WITH\nST_RAW AS (\n  SELECT\n    DATE                                                              AS date,\n    LOWER(QUERY)                                                      AS query,\n    CASE WHEN DOM_DOMAIN_ID != 'not set'\n         THEN SUBSTR(DOM_DOMAIN_ID, 5, 20)\n         ELSE 'not set' END                                           AS domain,\n    SUM(SEARCHS)                                                      AS searches,\n    SUM(SEARCHSWVIP)                                                  AS searches_vip,\n    MAX(RESULTS)                                                      AS max_results,\n    SUM(UNIQUEBUYERS_STRICT_24hr)                                     AS buyers,\n    SUM(ORDERS_STRICT_24hr)                                           AS orders,\n    SUM(TRX_STRICT_24hr)                                              AS trx,\n    SUM(GMV_STRICT_24hr)                                              AS gmv,\n    SUM(SI_STRICT_24hr)                                               AS si\n  FROM `meli-bi-data.WHOWNER.DM_SEARCHTERMS`\n  WHERE DATE BETWEEN DATE '2026-05-11' AND DATE '2026-05-18'\n    AND SIT_SITE_ID = 'MLA'\n    AND PLATFORM IN ('/mobile/android', '/mobile/ios')\n    AND LENGTH(LOWER(QUERY)) > 0\n    AND LOWER(QUERY) IS NOT NULL\n  GROUP BY 1, 2, 3\n),\nST_ENRICHED AS (\n  SELECT\n    CAST(date AS STRING)                                              AS date,\n    query,\n    domain,\n    searches,\n    searches_vip,\n    max_results,\n    ROUND(SAFE_DIVIDE(searches_vip, searches), 4)                     AS ctr,\n    ROUND(SAFE_DIVIDE(buyers, searches), 4)                           AS cvr,\n    orders,\n    trx,\n    ROUND(gmv, 2)                                                     AS gmv,\n    si,\n    buyers\n  FROM ST_RAW\n)\nSELECT TO_BASE64(CAST(\n  CONCAT(\n    '{\"dates\":[\"2026-05-11\",\"2026-05-12\",\"2026-05-13\",\"2026-05-14\",\"2026-05-15\",\"2026-05-16\",\"2026-05-17\",\"2026-05-18\"]',\n    ',\"search_terms\":',\n    (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(\n      date, query, domain, searches, searches_vip, max_results, ctr, cvr, orders, trx, gmv, si, buyers\n    ) ORDER BY searches DESC LIMIT 500))\n     FROM ST_ENRICHED),\n    ',\"refreshed_at\":\"',\n    FORMAT_TIMESTAMP('%Y-%m-%dT%H:%M:%S', CURRENT_TIMESTAMP(), 'America/Argentina/Buenos_Aires'),\n    '\"}'\n  )\nAS BYTES)) AS data_b64",
         "options": {
           "location": "US"
         }
@@ -29,7 +32,10 @@
       "id": "bq-search-terms",
       "name": "BQ Search Terms",
       "type": "n8n-nodes-base.googleBigQuery",
-      "position": [340, 80],
+      "position": [
+        340,
+        80
+      ],
       "typeVersion": 2
     },
     {
@@ -53,7 +59,10 @@
       "id": "get-sha-st",
       "name": "Get SHA Search Terms",
       "type": "n8n-nodes-base.httpRequest",
-      "position": [520, 80],
+      "position": [
+        520,
+        80
+      ],
       "typeVersion": 4.2,
       "onError": "continueRegularOutput"
     },
@@ -100,22 +109,51 @@
       "id": "push-search-terms",
       "name": "Push Search Terms to GitHub",
       "type": "n8n-nodes-base.httpRequest",
-      "position": [700, 80],
+      "position": [
+        700,
+        80
+      ],
       "typeVersion": 4.2
     }
   ],
   "connections": {
     "Schedule Trigger": {
-      "main": [[{"node": "BQ Search Terms", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "BQ Search Terms",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "BQ Search Terms": {
-      "main": [[{"node": "Get SHA Search Terms", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Get SHA Search Terms",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Get SHA Search Terms": {
-      "main": [[{"node": "Push Search Terms to GitHub", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Push Search Terms to GitHub",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": false,
-  "settings": {"executionOrder": "v1"},
+  "settings": {
+    "executionOrder": "v1"
+  },
   "pinData": {}
 }
