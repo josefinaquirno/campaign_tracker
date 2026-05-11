@@ -927,7 +927,8 @@ function renderSummary(){
   // Image URLs — loaded from campaigns.json per-campaign config
   var RAW='https://raw.githubusercontent.com/josefinaquirno/campaign_tracker/main/docs/';
   var _imgs=(ACTIVE_CAMPAIGN&&ACTIVE_CAMPAIGN.images)||{};
-  var IMG_CEL=_imgs.celebrity?RAW+encodeURIComponent(_imgs.celebrity):'';
+  var IMG_GEN=_imgs.general  ?RAW+encodeURIComponent(_imgs.general)  :'';
+  var IMG_CEL=_imgs.celebrity?RAW+encodeURIComponent(_imgs.celebrity):IMG_GEN;
   var IMG_TAC=_imgs.tachados ?RAW+encodeURIComponent(_imgs.tachados) :'';
 
   var cs=_cs, ce=_ce;
