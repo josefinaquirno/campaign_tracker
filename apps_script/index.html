@@ -772,9 +772,9 @@ function renderSearchTerms(){
   var top10 = aggregated.slice(0, 10);
   if(wrap && top10.length){
     wrap.style.display = 'block';
-    var labels = top10.map(function(r){ return r.query; }).reverse();
-    var values = top10.map(function(r){ return r.searches; }).reverse();
-    var cvrs   = top10.map(function(r){ return r.cvr; }).reverse();
+    var labels = top10.map(function(r){ return r.query; });
+    var values = top10.map(function(r){ return r.searches; });
+    var cvrs   = top10.map(function(r){ return r.cvr; });
     var maxVal = Math.max.apply(null, values);
 
     if(_stBarChart){ _stBarChart.destroy(); _stBarChart = null; }
@@ -879,7 +879,7 @@ function renderSearchTerms(){
 
     html += '<tr style="background:'+bg+';border-bottom:1px solid rgba(255,255,255,0.04);">'
       + '<td style="padding:6px 8px;"><span style="'+rankStyle+'">'+(i+1)+'</span></td>'
-      + '<td style="padding:6px 8px;font-weight:500;color:#fff;">'+r.query+'</td>'
+      + '<td style="padding:6px 8px;font-weight:500;color:#aaa;">'+r.query+'</td>'
       + '<td style="padding:6px 8px;color:#666;font-size:11px;">'+r.domain+'</td>'
       + '<td style="padding:6px 8px;">'+barHtml+'</td>'
       + '<td style="padding:6px 8px;text-align:right;color:#aaa;">'+fNum(r.searches_vip)+'</td>'
