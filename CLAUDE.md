@@ -18,11 +18,17 @@ Apps Script (Code.gs)
 ## Archivos clave
 | Archivo | Rol |
 |---------|-----|
-| `apps_script/index.html` | Dashboard completo (~930 líneas, Chart.js) |
-| `apps_script/Code.gs` | Fetches ambos JSON, sirve el web app |
-| `docs/data.json` | Sobrescrito por Verdi cada mañana |
+| `apps_script/index.html` | Dashboard completo (Chart.js) — incluye tab Search Terms con gráfico top 10 + tabla mejorada |
+| `apps_script/Code.gs` | Fetches los JSON, sirve el web app |
+| `docs/data.json` | Sobrescrito por Verdi cada mañana (MS, containers, landing, total_site) |
+| `docs/calidad.json` | Calidad de oferta — generado por `verdi_calidad.json` |
+| `docs/oferta.json` | Métricas de oferta a nivel pattern — generado por `verdi_calidad.json` |
+| `docs/search_terms.json` | Top 500 términos de búsqueda — generado por `verdi_search_terms.json` |
 | `docs/historical.json` | Campañas cerradas — NUNCA tocado por Verdi |
-| `verdi_flow.json` | Config n8n — reimportar en Verdi al hacer cambios |
+| `verdi_flow.json` | Flow principal n8n (MS, containers, landing, total_site) |
+| `verdi_calidad.json` | Flow calidad de oferta — usa patrón LIKE sobre CONTAINER_NAME |
+| `verdi_search_terms.json` | Flow search terms — tabla `DM_SEARCHTERMS`, latencia ~12-14hs |
+| `verdi_targets_t1.json` | Flow targets T1 |
 | `process_bq.py` | Script manual para cerrar campaña → agregar a historical.json |
 
 ## Reglas importantes
@@ -69,9 +75,34 @@ Reimportar el flow en Verdi. Al cerrar campaña: correr `process_bq.py` (ajustar
   - Container: Sessions, NMV, CVR tienen target
   - MS CTR: cuando se cargue el array en `targets.ms.ctr`
 
-## Campaña actual: DOUBLE DATES
+## Campaña actual: HOT SALE 2026
+- Fechas: 2026-05-11 → 2026-05-18
+- Site: MLA · Mobile · T1
+- MS filter: `LIKE '%HOTSALE%'` (sin espacio)
+- Landings: `'hot-sale'`, `'hot-sale-parcial'`, `'hot-sale-tab'`
+- Container filter: `LIKE '%MKP T1 HOTSALE MAYO 2026%'` ⚠️ SIN espacio entre HOT y SALE
+- Calidad filter: mismo patrón `'%MKP T1 HOTSALE MAYO 2026%'` en CTE DATES de `verdi_calidad.json`
+- NASP = cantidad de containers únicos activos (target día 1: 48)
+- Targets T1 embebidos en SQL del flow, NO en Google Sheets
+
+## Latencia de tablas — Hot Sale
+| Tabla | Disponibilidad |
+|-------|---------------|
+| `DM_CONTAINERS_DEALS_ATTRIBUTION` | Mismo día, parcial desde temprano |
+| `MKP_SM_CONTAINERS_ITEMS_EXHIBIDOS` | 23hs GMT (20hs ART) — no correr calidad antes |
+| `LK_BENEFITS_RIU_CLUSTER_RESULTS` | Con 2 días de delay (usa `DATE_SUB(..., INTERVAL 2 DAY)`) |
+| `BENEFITS_OFFERS` | ~20hs ART — % con Oferta y DTO Ponderado = 0 hasta entonces |
+| `DM_SEARCHTERMS` | ~12-14hs ART — search_terms null en las primeras horas del día |
+| `BT_MKP_SESSIONS` | Parcial durante el día |
+
+## Tab Search Terms — mejoras aplicadas (2026-05-11)
+- Gráfico de barras horizontal top 10 por búsquedas (amarillo Meli, mayor a menor)
+- Valor en K + CVR al lado de cada barra
+- Tabla: mini barra de progreso en columna búsquedas, CVR con color semántico (verde ≥4%, amarillo ≥2%), badge amarillo para top 10, color de término unificado con el resto
+- Chart se destruye y re-crea al cambiar filtro de fecha (`_stBarChart` global)
+
+## Campaña anterior: DOUBLE DATES
 - Fechas: 2026-04-20 → 2026-05-05
 - MS filter: `LIKE '%DOUBLEDATES%'`
 - Landings: `'ofertas futboleras'`, `'5-5-descuentos-parcial'`
 - Container filter: `LIKE '%MKP T2 DOUBLE DATES 5 5 ABRIL 2026%'`
-- Histórica disponible: "DOUBLE DATES 04/04" (2026-03-23 → 2026-04-07)
