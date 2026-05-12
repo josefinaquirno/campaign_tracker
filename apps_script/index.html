@@ -1123,7 +1123,7 @@ function renderSummary(){
     cont_nmv_tgt: tgtArr(tgtCNT.nmv),
     cont_nmvpct:     dayV(function(d){var b=cntByDate[d],ts=tsMap[d];return b&&ts&&+ts.tgmv_usd>0?b.nmv/+ts.tgmv_usd:null;}),
     cont_nmvpct_tgt: tgtArr(tgtCNT.share_nmv),
-    cont_asp:     dayV(function(d){var b=cntByDate[d];return b&&b.ord>0?b.nmv/b.ord:null;}),
+    cont_asp:     dayV(function(d){var b=cntByDate[d];return b&&b.nsi>0?b.nmv/b.nsi:null;}),
     cont_nsi:     dayV(function(d){var b=cntByDate[d];return b?b.nsi:null;}),
     cont_nsi_tgt: tgtArr(tgtCNT.nsi),
     cont_cvr:     dayV(function(d){var b=cntByDate[d];return b&&b.ses>0?b.ord/b.ses:null;}),
