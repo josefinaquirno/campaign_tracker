@@ -1510,7 +1510,7 @@ function setLdgFilter(v,btn){
 
 function renderLanding(){
   var rows = D.landing||[];
-  if(!rows.length){ document.getElementById('ldg-kpis').innerHTML='<p style="color:#aaa;font-size:13px">Sin datos Landing</p>'; return; }
+  if(!rows.length){ var _el=document.getElementById('ldg-kpis-eng'); if(_el) _el.innerHTML='<p style="color:#aaa;font-size:13px">Sin datos Landing</p>'; return; }
 
   var filtered = LDG_FILTER==='ALL' ? rows : rows.filter(function(r){return r.landing_name===LDG_FILTER;});
 
@@ -2096,7 +2096,11 @@ function renderInlineComparison(placement, containerId){
   h+='</tbody></table></div></div>';
   el.innerHTML=h;
 
-  setTimeout(function(){
+  // Use double-RAF + timeout so the dynamically-injected canvas is fully laid out
+  // before Chart.js tries to measure its container (avoids 0×0 render on landing tab)
+  function _drawCmpChart(){
+    var cvs=document.getElementById(chartId);
+    if(!cvs) return; // canvas was replaced by a newer render — bail out
     var curVals =Array.from({length:days},function(_,i){var r=curRows[i]; return r?+(r[chartKey]*chartMult).toFixed(chartDec):null;});
     var histVals=Array.from({length:days},function(_,i){var r=histRows[i];return r?+(r[chartKey]*chartMult).toFixed(chartDec):null;});
 
@@ -2122,10 +2126,17 @@ function renderInlineComparison(placement, containerId){
     datasets.push(
       {label:histName, data:histVals, borderColor:'#9B59B6',backgroundColor:'transparent',       fill:false,tension:.3,pointRadius:4,borderWidth:2, borderDash:[5,4]}
     );
-    CH[chartId]=new Chart(document.getElementById(chartId).getContext('2d'),{
+    CH[chartId]=new Chart(cvs.getContext('2d'),{
       type:'line',data:{labels:dayLabels,datasets:datasets},options:opts
     });
-  },50);
+  }
+  // Two requestAnimationFrame passes ensure the inserted canvas is painted + laid out,
+  // then a 100ms buffer handles any lingering Chart.js RAF animations from sibling charts
+  requestAnimationFrame(function(){
+    requestAnimationFrame(function(){
+      setTimeout(_drawCmpChart, 100);
+    });
+  });
 }
 
 // ──────────────────────────────────────────────
