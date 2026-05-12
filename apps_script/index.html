@@ -945,9 +945,10 @@ function _toFilterHtml(){
 }
 // ── Date pills helper (Acum. + per-day) ──────────────────
 function _datePillsHtml(allDates, current, setterName){
-  var h='<button class="pill '+(current==='ALL'?'active':'')+'" onclick="'+setterName+'(\'ALL\')">Acum.</button>';
+  var h='<button class="op-fbtn '+(current==='ALL'?'active':'')+'" onclick="'+setterName+'(\'ALL\')">Acum.</button>';
   allDates.forEach(function(d){
-    h+='<button class="pill '+(current===d?'active':'')+'" onclick="'+setterName+'(\''+d+'\')">'+fDate(d)+'</button>';
+    var lbl=d.slice(5).replace(/^0/,'').replace('-','/');
+    h+='<button class="op-fbtn '+(current===d?'active':'')+'" onclick="'+setterName+'(\''+d+'\')">'+lbl+'</button>';
   });
   return h;
 }
