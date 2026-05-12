@@ -218,8 +218,8 @@
   <div id="to-toggle-wrap" style="margin-left:auto;display:flex;align-items:center;gap:6px;display:none;">
     <span style="font-size:11px;color:#888;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Días TakeOver:</span>
     <div style="display:flex;gap:4px;">
-      <button class="pill active" id="to-btn-all" onclick="setToFilter('ALL',this)">Con TO</button>
-      <button class="pill" id="to-btn-noto" onclick="setToFilter('NO_TO',this)">Sin TO</button>
+      <button class="pill to-filter-btn active" data-toval="ALL" id="to-btn-all" onclick="setToFilter('ALL',this)">Con TO</button>
+      <button class="pill to-filter-btn" data-toval="NO_TO" id="to-btn-noto" onclick="setToFilter('NO_TO',this)">Sin TO</button>
     </div>
   </div>
 </div>
@@ -260,6 +260,7 @@
         <div class="toggle-row" style="margin:0" id="ms-toggles"></div>
         <div style="width:1px;height:20px;background:#ddd"></div>
         <div class="toggle-row" style="margin:0" id="ms-seg-toggles"></div>
+        <div id="ms-to-filter" style="display:flex;gap:4px;align-items:center;margin-left:auto"></div>
       </div>
 
       <div class="kpi-grid" id="ms-kpis"></div>
@@ -345,6 +346,7 @@
               <button class="pill" onclick="setCntView('vertical',this)">Por vertical</button>
             </div>
             <div class="tbl-badge" id="cnt-tbl-badge"></div>
+            <div id="cnt-to-filter" style="display:flex;gap:4px;align-items:center;margin-left:auto"></div>
           </div>
         </div>
         <div id="cnt-tbl-body"></div>
@@ -928,10 +930,21 @@ function tgtLine(arr, tgtDates, dataDates){
 function tgtDS(data){ return {label:'Target',data:data,borderColor:'#aaa',borderDash:[6,4],backgroundColor:'transparent',tension:.3,pointRadius:2,borderWidth:1.5,fill:false}; }
 
 // ── TO Filter ──────────────────────────────────
+// Genera los pills "Con TO / Sin TO" para inyectar dentro de cada tab
+function _toFilterHtml(){
+  var toDates=(D.targets&&D.targets.to_dates)||[];
+  if(!toDates.length) return '';
+  return '<span style="width:1px;height:16px;background:#ddd;display:inline-block;margin:0 4px"></span>'
+    +'<span style="font-size:10px;color:#888;font-weight:600;text-transform:uppercase;letter-spacing:.4px">TakeOver:</span>'
+    +'<button class="pill to-filter-btn '+(TO_FILTER==='ALL'?'active':'')+'" data-toval="ALL" onclick="setToFilter(\'ALL\',this)">Con TO</button>'
+    +'<button class="pill to-filter-btn '+(TO_FILTER==='NO_TO'?'active':'')+'" data-toval="NO_TO" onclick="setToFilter(\'NO_TO\',this)">Sin TO</button>';
+}
 function setToFilter(v, btn){
   TO_FILTER = v;
-  document.querySelectorAll('#to-toggle-wrap .pill').forEach(function(b){b.classList.remove('active');});
-  btn.classList.add('active');
+  // Sincroniza TODOS los botones TO en la página (global + por-tab)
+  document.querySelectorAll('.to-filter-btn').forEach(function(b){
+    b.classList.toggle('active', b.dataset.toval===v);
+  });
   if(ACTIVE_TAB==='summary'){
     // Para Summary: no destruir/recrear los charts.
     // 1) Recalcular índices TO
@@ -1318,6 +1331,9 @@ function renderMS(){
     +'<button class="pill '+(MS_SEG_FILTER==='SEGMENTADO'?'active':'')+'" onclick="setMSSeg(\'SEGMENTADO\',this)">SEGMENTADO</button>'
     +'<button class="pill '+(MS_SEG_FILTER==='NO SEGMENTADO'?'active':'')+'" onclick="setMSSeg(\'NO SEGMENTADO\',this)">NO SEGMENTADO</button>';
   document.getElementById('ms-seg-toggles').innerHTML=segHtml;
+  // TO filter para MS
+  var msToWrap=document.getElementById('ms-to-filter');
+  if(msToWrap) msToWrap.innerHTML=_toFilterHtml();
 
   // Filter by bucket then by segmentation
   var filtered = MS_BUCKET==='ALL' ? rows : rows.filter(function(r){ return getBucket(r.line_item)===MS_BUCKET; });
@@ -1499,6 +1515,7 @@ function buildLdgToggles(){
   (D.landing||[]).forEach(function(r){ if(names.indexOf(r.landing_name)<0) names.push(r.landing_name); });
   var html = '<button class="pill active" onclick="setLdgFilter(\'ALL\',this)">COMBINADO</button>';
   names.forEach(function(n){ html+='<button class="pill" onclick="setLdgFilter(\''+n+'\',this)">'+n.toUpperCase()+'</button>'; });
+  html+=_toFilterHtml();
   document.getElementById('ldg-toggles').innerHTML=html;
 }
 
@@ -1885,6 +1902,8 @@ function renderContainer(){
   tblData.sort(function(a,b){ var av=a[SORT_COL.cnt]||0,bv=b[SORT_COL.cnt]||0; return SORT_ASC.cnt?av-bv:bv-av; });
 
   document.getElementById('cnt-tbl-badge').textContent=tblData.length+(CNT_VIEW==='container'?' containers':' verticales');
+  var cntToWrap=document.getElementById('cnt-to-filter');
+  if(cntToWrap) cntToWrap.innerHTML=_toFilterHtml();
 
   var h='<table><thead><tr>'+colsCnt.map(function(c){
     var ar=SORT_COL.cnt===c.k?(SORT_ASC.cnt?' ▲':' ▼'):'';
@@ -2466,6 +2485,7 @@ function buildLdgoToggles(){
   (D.landing_original||[]).forEach(function(r){if(names.indexOf(r.landing_name)<0)names.push(r.landing_name);});
   var html='<button class="pill active" onclick="setLdgoFilter(\'ALL\',this)">COMBINADO</button>';
   names.forEach(function(n){html+='<button class="pill" onclick="setLdgoFilter(\''+n+'\',this)">'+n.toUpperCase()+'</button>';});
+  html+=_toFilterHtml();
   document.getElementById('ldgo-toggles').innerHTML=html;
 }
 var LDGO_FILTER='ALL';
