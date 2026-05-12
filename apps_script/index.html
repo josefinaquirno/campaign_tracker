@@ -1356,11 +1356,7 @@ function renderMS(){
   var filtered = MS_BUCKET==='ALL' ? rows : rows.filter(function(r){ return getBucket(r.line_item)===MS_BUCKET; });
   if(MS_SEG_FILTER!=='ALL') filtered=filtered.filter(function(r){ return r.segmentation===MS_SEG_FILTER; });
 
-  // Aggregate totals
-  var tot = filtered.reduce(function(a,r){ a.clicks+=+r.clicks||0; a.prints+=+r.prints||0; return a; },{clicks:0,prints:0});
-  tot.ctr = tot.prints>0 ? tot.clicks/tot.prints : 0;
-
-  // Last day
+  // Build byDate first so we can inject pills and derive dateFiltered
   var byDate = {};
   filtered.forEach(function(r){ var d=r.fecha; if(!byDate[d]) byDate[d]={clicks:0,prints:0}; byDate[d].clicks+=+r.clicks||0; byDate[d].prints+=+r.prints||0; });
   var allDatesMS = Object.keys(byDate).sort();
@@ -1369,6 +1365,13 @@ function renderMS(){
   if(msDateWrap) msDateWrap.innerHTML=_datePillsHtml(allDatesMS, MS_DATE_FILTER, 'setMSDateFilter');
   var lastDate = (MS_DATE_FILTER==='ALL' ? dates[dates.length-1] : MS_DATE_FILTER)||'—';
   document.getElementById('ms-badge-period').textContent = 'hasta '+fDate(lastDate);
+
+  // Date-filtered rows — used for KPIs, segmentation calcs and table
+  var dateFiltered = MS_DATE_FILTER==='ALL' ? filtered : filtered.filter(function(r){ return r.fecha===MS_DATE_FILTER; });
+
+  // Aggregate totals from date-filtered data
+  var tot = dates.reduce(function(a,d){ a.clicks+=byDate[d].clicks; a.prints+=byDate[d].prints; return a; },{clicks:0,prints:0});
+  tot.ctr = tot.prints>0 ? tot.clicks/tot.prints : 0;
 
   var tgt = (D.targets&&D.targets.ms)||{};
   var msCtrTarget = getMsCtrTarget(); // escalar dinámico por bucket
@@ -1389,9 +1392,9 @@ function renderMS(){
     return '<div class="kpi-target '+cls+'">'+(pct>=0?'▲ ':'▼ ')+Math.abs(pct).toFixed(1)+'% vs '+histNameMS+'</div>';
   }
 
-  // Segmentation KPIs
+  // Segmentation KPIs (from date-filtered rows)
   var segSeg={clicks:0,prints:0,lis:{}}, segAll={lis:{}};
-  filtered.forEach(function(r){
+  dateFiltered.forEach(function(r){
     var isSeg=(r.segmentation==='SEGMENTADO');
     if(isSeg){segSeg.clicks+=+r.clicks||0; segSeg.prints+=+r.prints||0; segSeg.lis[r.line_item]=1;}
     segAll.lis[r.line_item]=1;
@@ -1460,7 +1463,7 @@ function renderMS(){
 
   // Table by bucket → campaign_name (with drill-down per campaign)
   var campMap={};
-  filtered.forEach(function(r){
+  dateFiltered.forEach(function(r){
     var camp=r.campaign_name||r.line_item;
     var b=getBucket(r.line_item);
     if(!campMap[camp]) campMap[camp]={name:camp,bucket:b,clicks:0,prints:0,lis:{}};
