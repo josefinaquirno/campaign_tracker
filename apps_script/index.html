@@ -323,6 +323,7 @@
     <!-- ==================== CONTAINER TAB ==================== -->
     <div class="tab-panel" id="panel-container">
       <div class="section-label">CONTAINERS <span class="badge" id="cnt-badge-period">—</span></div>
+      <div class="toggle-row" id="cnt-date-filter"></div>
 
       <div class="kpi-grid" id="cnt-kpis-main"></div>
 
@@ -339,7 +340,6 @@
         <div class="table-head">
           <div class="table-head-title">Performance por container activo</div>
           <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-            <div class="toggle-row" style="margin:0" id="cnt-date-filter"></div>
             <div class="toggle-row" style="margin:0" id="cnt-view-toggle">
               <button class="pill active" onclick="setCntView('container',this)">Por container</button>
               <button class="pill" onclick="setCntView('vertical',this)">Por vertical</button>
