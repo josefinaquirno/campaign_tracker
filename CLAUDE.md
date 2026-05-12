@@ -67,6 +67,8 @@ Reimportar el flow en Verdi. Al cerrar campaña: correr `process_bq.py` (ajustar
 - `alta` → **HIGH**
 - `media` → **MID**
 
+Campañas dentro del drill-down por bucket: ordenadas por **CTR descendente**.
+
 ## Targets en el dashboard
 - KPI cards: borde verde/naranja/rojo + `▲/▼ X% vs target`
 - Charts: línea gris punteada
@@ -75,6 +77,42 @@ Reimportar el flow en Verdi. Al cerrar campaña: correr `process_bq.py` (ajustar
   - Container: Sessions, NMV, CVR tienen target
   - MS CTR: cuando se cargue el array en `targets.ms.ctr`
 
+## Métricas — fórmulas correctas (¡importante!)
+
+**NASP** = `NMV / NSI` (no NMV/Orders). Aplicado en:
+- Containers tab: `tot.nasp = tot.nsi > 0 ? tot.nmv / tot.nsi : 0`
+- Summary `cont_asp`: `sum(cont_nmv) / sum(cont_nsi)` para el período (NO opAvg de ratios diarios)
+
+**NMV Share % vs Site** = `sum(containerNMV) / sum(siteNMV)` para el período.
+- Summary usa `opSum` en ambos — NO `opAvg(cont_nmvpct)`.
+
+**Regla general**: para métricas acumuladas (share, NASP), siempre dividir sumas — nunca promediar ratios diarios. `opAvg` da resultados diferentes y es incorrecto para acumulados.
+
+## Filtros en todas las tabs (MS, Landing, Landing Attr Acida, Containers)
+
+**Filtro TakeOver**: helper `_toFilterHtml()`, clase `.to-filter-btn`, sincronizado globalmente. Posición: dentro de los toggles de cada tab.
+
+**Filtro de fechas**: helper `_datePillsHtml(allDates, current, setterName)`. Clase `op-fbtn` (igual que Summary), formato `5/11`, active púrpura `#9c6ef0`. Posición: debajo del section-label, encima de los KPIs.
+- MS → `MS_DATE_FILTER` / `setMSDateFilter` / `#ms-date-filter`
+- Landing → `LDG_DATE_FILTER` / `setLdgDateFilter` / `#ldg-date-filter`
+- Landing Attr Acida → `LDGO_DATE_FILTER` / `setLdgoDateFilter` / `#ldgo-date-filter`
+- Containers → `CNT_DATE_FILTER` / `setCntDateFilter` / `#cnt-date-filter`
+
+El filtro de fecha en **MS** requiere derivar `dateFiltered` para aplicar a KPIs, segmentación y tabla (no solo al chart). MS usa `r.fecha` (no `r.date`).
+
+## Tabla Containers — fila de totales
+`<tfoot>` en fondo `#1a1a2e` / texto `#FFE600`. CVR y NASP calculados sobre totales acumulados (no promediados por fila).
+
+## Comparison chart timing
+`renderInlineComparison(placement, containerId)` usa double `requestAnimationFrame` + `setTimeout(100)` para evitar canvas 0×0.
+Placements activos: `'ms'`, `'landing'`, `'landing-orig'`, `'container'`.
+
+## verdi_opt_landing.json — query
+3 CTEs: `splinter` (DM_SPLINTER_COMPONENT) + `eshop_cpg` (DM_ESHOP_LANDING_ATTRIBUTION, Carrefour/Full Súper) + `combined` (LEFT JOIN ON LOWER(button_name) LIKE '%cpg%').
+
+## Git en Windows — problema de encoding
+Archivos pueden aparecer como modificados en Windows por diferencias de encoding (BOM/CRLF). Solución: `git restore .` antes de `git pull --rebase`.
+
 ## Campaña actual: HOT SALE 2026
 - Fechas: 2026-05-11 → 2026-05-18
 - Site: MLA · Mobile · T1
@@ -82,8 +120,10 @@ Reimportar el flow en Verdi. Al cerrar campaña: correr `process_bq.py` (ajustar
 - Landings: `'hot-sale'`, `'hot-sale-parcial'`, `'hot-sale-tab'`
 - Container filter: `LIKE '%MKP T1 HOTSALE MAYO 2026%'` ⚠️ SIN espacio entre HOT y SALE
 - Calidad filter: mismo patrón `'%MKP T1 HOTSALE MAYO 2026%'` en CTE DATES de `verdi_calidad.json`
-- NASP = cantidad de containers únicos activos (target día 1: 48)
-- Targets T1 embebidos en SQL del flow, NO en Google Sheets
+- Targets activos: `docs/targets_t1.json` (referenciado via `campaigns.json` → `targets_file`)
+- NASP scalar en `D.targets.nasp` = 121.4 (no es array, es escalar global)
+- `to_dates` en targets_t1.json: fechas con TakeOver (para filtro Con/Sin TO)
+- Targets T1 en archivo JSON separado (`targets_t1.json`), NO embebidos en SQL
 
 ## Latencia de tablas — Hot Sale
 | Tabla | Disponibilidad |
