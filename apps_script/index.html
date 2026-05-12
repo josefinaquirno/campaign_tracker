@@ -262,6 +262,7 @@
         <div class="toggle-row" style="margin:0" id="ms-seg-toggles"></div>
         <div id="ms-to-filter" style="display:flex;gap:4px;align-items:center;margin-left:auto"></div>
       </div>
+      <div class="toggle-row" id="ms-date-filter"></div>
 
       <div class="kpi-grid" id="ms-kpis"></div>
 
@@ -287,6 +288,7 @@
       <div class="section-label">LANDING <span class="badge" id="ldg-badge-period">—</span></div>
 
       <div class="toggle-row" id="ldg-toggles"></div>
+      <div class="toggle-row" id="ldg-date-filter"></div>
 
       <div class="section-label" style="margin-top:4px">Engagement</div>
       <div class="kpi-grid" id="ldg-kpis-eng"></div>
@@ -337,10 +339,7 @@
         <div class="table-head">
           <div class="table-head-title">Performance por container activo</div>
           <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-            <select id="cnt-date-select" onchange="setCntDateFilter(this.value)"
-              style="border:1px solid #ddd;border-radius:6px;padding:4px 10px;font-size:11px;font-family:inherit;color:#333;cursor:pointer;">
-              <option value="ALL">Todos los días</option>
-            </select>
+            <div class="toggle-row" style="margin:0" id="cnt-date-filter"></div>
             <div class="toggle-row" style="margin:0" id="cnt-view-toggle">
               <button class="pill active" onclick="setCntView('container',this)">Por container</button>
               <button class="pill" onclick="setCntView('vertical',this)">Por vertical</button>
@@ -359,6 +358,7 @@
     <div class="tab-panel" id="panel-landing-orig">
       <div class="section-label">LANDING ATTR ACIDA <span class="badge" id="ldgo-badge-period">—</span></div>
       <div class="toggle-row" id="ldgo-toggles"></div>
+      <div class="toggle-row" id="ldgo-date-filter"></div>
       <div class="section-label" style="margin-top:4px">Engagement</div>
       <div class="kpi-grid" id="ldgo-kpis-eng"></div>
       <div class="section-label" style="margin-top:4px">Performance</div>
@@ -487,6 +487,9 @@ var ACTIVE_TAB = 'summary';
 var LDG_FILTER = 'ALL';
 var CNT_VIEW        = 'container';
 var CNT_DATE_FILTER = 'ALL';
+var MS_DATE_FILTER  = 'ALL';
+var LDG_DATE_FILTER = 'ALL';
+var LDGO_DATE_FILTER= 'ALL';
 var CMP_IDX    = '';
 var SORT_COL   = { ms:'clicks', ldg:'sessions', cnt:'cvr' };
 var SORT_ASC   = { ms:false, ldg:false, cnt:false };
@@ -565,6 +568,7 @@ function switchCampaign(id){
   COMP_D = null; COMP_CAMPAIGN = null; CMP_IDX = '';
   LDG_FILTER = 'ALL'; LDGO_FILTER = 'ALL';
   MS_BUCKET = 'ALL'; MS_SEG_FILTER = 'ALL'; CNT_DATE_FILTER = 'ALL';
+  MS_DATE_FILTER = 'ALL'; LDG_DATE_FILTER = 'ALL'; LDGO_DATE_FILTER = 'ALL';
   document.getElementById('loading').style.display='block';
   document.getElementById('content').style.display='none';
   buildCampaignSelector();
@@ -939,6 +943,18 @@ function _toFilterHtml(){
     +'<button class="pill to-filter-btn '+(TO_FILTER==='ALL'?'active':'')+'" data-toval="ALL" onclick="setToFilter(\'ALL\',this)">Con TO</button>'
     +'<button class="pill to-filter-btn '+(TO_FILTER==='NO_TO'?'active':'')+'" data-toval="NO_TO" onclick="setToFilter(\'NO_TO\',this)">Sin TO</button>';
 }
+// ── Date pills helper (Acum. + per-day) ──────────────────
+function _datePillsHtml(allDates, current, setterName){
+  var h='<button class="pill '+(current==='ALL'?'active':'')+'" onclick="'+setterName+'(\'ALL\')">Acum.</button>';
+  allDates.forEach(function(d){
+    h+='<button class="pill '+(current===d?'active':'')+'" onclick="'+setterName+'(\''+d+'\')">'+fDate(d)+'</button>';
+  });
+  return h;
+}
+function setMSDateFilter(v){ MS_DATE_FILTER=v; renderMS(); }
+function setLdgDateFilter(v){ LDG_DATE_FILTER=v; renderLanding(); }
+function setLdgoDateFilter(v){ LDGO_DATE_FILTER=v; renderLandingOrig(); }
+
 function setToFilter(v, btn){
   TO_FILTER = v;
   // Sincroniza TODOS los botones TO en la página (global + por-tab)
@@ -1346,8 +1362,11 @@ function renderMS(){
   // Last day
   var byDate = {};
   filtered.forEach(function(r){ var d=r.fecha; if(!byDate[d]) byDate[d]={clicks:0,prints:0}; byDate[d].clicks+=+r.clicks||0; byDate[d].prints+=+r.prints||0; });
-  var dates = Object.keys(byDate).sort();
-  var lastDate = dates[dates.length-1]||'—';
+  var allDatesMS = Object.keys(byDate).sort();
+  var dates = MS_DATE_FILTER==='ALL' ? allDatesMS : allDatesMS.filter(function(d){ return d===MS_DATE_FILTER; });
+  var msDateWrap=document.getElementById('ms-date-filter');
+  if(msDateWrap) msDateWrap.innerHTML=_datePillsHtml(allDatesMS, MS_DATE_FILTER, 'setMSDateFilter');
+  var lastDate = (MS_DATE_FILTER==='ALL' ? dates[dates.length-1] : MS_DATE_FILTER)||'—';
   document.getElementById('ms-badge-period').textContent = 'hasta '+fDate(lastDate);
 
   var tgt = (D.targets&&D.targets.ms)||{};
@@ -1540,7 +1559,10 @@ function renderLanding(){
     b.sessions+=+r.sessions||0; b.nmv+=+r.nmv||0; b.orders+=+r.orders||0; b.transactions+=+r.transactions||0;
     b.nsi+=+r.nsi||0; b.buyers+=+r.buyers||0;
   });
-  var dates = activeDates(Object.keys(byDate).sort());
+  var allDatesLdg = activeDates(Object.keys(byDate).sort());
+  var dates = LDG_DATE_FILTER==='ALL' ? allDatesLdg : allDatesLdg.filter(function(d){ return d===LDG_DATE_FILTER; });
+  var ldgDateWrap=document.getElementById('ldg-date-filter');
+  if(ldgDateWrap) ldgDateWrap.innerHTML=_datePillsHtml(allDatesLdg, LDG_DATE_FILTER, 'setLdgDateFilter');
   var tot = dates.reduce(function(a,d){ var b=byDate[d];
     a.sessions+=b.sessions; a.nmv+=b.nmv; a.orders+=b.orders; a.transactions+=b.transactions;
     a.nsi+=b.nsi; a.buyers+=b.buyers; return a;
@@ -1725,7 +1747,10 @@ function renderContainer(){
     b.sessions+=+r.sessions||0; b.nmv+=+r.nmv||0; b.orders+=+r.orders||0; b.transactions+=+r.transactions||0;
     b.nsi+=+r.nsi||0; b.users_container+=+r.users_container||0; b.users_vip+=+r.users_vip||0; b.buyers+=+r.buyers||0;
   });
-  var dates=activeDates(Object.keys(byDate).sort());
+  var allDatesCnt=activeDates(Object.keys(byDate).sort());
+  var dates=CNT_DATE_FILTER==='ALL'?allDatesCnt:allDatesCnt.filter(function(d){return d===CNT_DATE_FILTER;});
+  var cntDateWrap=document.getElementById('cnt-date-filter');
+  if(cntDateWrap) cntDateWrap.innerHTML=_datePillsHtml(allDatesCnt,CNT_DATE_FILTER,'setCntDateFilter');
   var tot=dates.reduce(function(a,d){var b=byDate[d];
     a.sessions+=b.sessions;a.nmv+=b.nmv;a.orders+=b.orders;a.transactions+=b.transactions;
     a.nsi+=b.nsi;a.users_container+=b.users_container;a.users_vip+=b.users_vip;a.buyers+=b.buyers;return a;
@@ -1847,19 +1872,6 @@ function renderContainer(){
       }
     }
   });
-
-  // Poblar dropdown de fechas
-  var sel=document.getElementById('cnt-date-select');
-  if(sel){
-    var prevVal=CNT_DATE_FILTER;
-    sel.innerHTML='<option value="ALL">Todos los días</option>';
-    dates.forEach(function(d){
-      var opt=document.createElement('option');
-      opt.value=d; opt.textContent=fDate(d);
-      if(d===prevVal) opt.selected=true;
-      sel.appendChild(opt);
-    });
-  }
 
   // Filtrar rows de la tabla por fecha seleccionada
   var tblRows = CNT_DATE_FILTER==='ALL' ? rows : rows.filter(function(r){ return (r.date||r.DATE)===CNT_DATE_FILTER; });
@@ -2511,7 +2523,10 @@ function renderLandingOrig(){
     b.transactions+=+r.transactions||0; b.nsi+=+r.nsi||0; b.buyers+=+r.buyers||0;
     b.ul+=+r.users_landing||0; b.uc+=+r.users_container||0;
   });
-  var dates=activeDates(Object.keys(byDate).sort());
+  var allDatesLdgo=activeDates(Object.keys(byDate).sort());
+  var dates=LDGO_DATE_FILTER==='ALL'?allDatesLdgo:allDatesLdgo.filter(function(d){return d===LDGO_DATE_FILTER;});
+  var ldgoDateWrap=document.getElementById('ldgo-date-filter');
+  if(ldgoDateWrap) ldgoDateWrap.innerHTML=_datePillsHtml(allDatesLdgo,LDGO_DATE_FILTER,'setLdgoDateFilter');
   var tot=dates.reduce(function(a,d){var b=byDate[d];
     a.sessions+=b.sessions;a.nmv+=b.nmv;a.orders+=b.orders;a.transactions+=b.transactions;
     a.nsi+=b.nsi;a.buyers+=b.buyers;a.ul+=b.ul;a.uc+=b.uc;return a;
