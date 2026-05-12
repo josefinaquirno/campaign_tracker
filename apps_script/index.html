@@ -1035,12 +1035,30 @@ function computeNsiTarget(dates, byDate){
   });
   return found ? Math.round(sum) : null;
 }
-// NMV target = nsi_target * nasp
-function computeNmvTarget(nsiTarget){
-  var raw = D.targets && D.targets.nasp;
-  // Handle case where nasp arrived as object {"nasp_val":"25.94"} due to BQ column ambiguity
-  var nasp = (raw != null && typeof raw === 'object') ? +(raw.nasp_val || raw.nasp || 0) : +raw;
-  return (nsiTarget != null && nasp > 0) ? Math.round(nsiTarget * nasp) : null;
+// NMV target = sum(nsiTarget_i * nasp_i) por día
+// nasp puede ser array por día o escalar (backward compat)
+function computeNmvTarget(dates, byDate){
+  var tgt = D.targets || {};
+  var bTrx  = (tgt.container && tgt.container.transacciones) || [];
+  var bNsi  = (tgt.container && tgt.container.nsi) || [];
+  var tDates = tgt.dates || [];
+  var raw   = tgt.nasp;
+  var naspArr    = Array.isArray(raw) ? raw : null;
+  var naspScalar = !naspArr && raw != null
+    ? (typeof raw === 'object' ? +(raw.nasp_val || raw.nasp || 0) : +raw)
+    : 0;
+  if(!bTrx.length || !bNsi.length) return null;
+  var nmvSum = 0, found = false;
+  dates.forEach(function(d){
+    var i = tDates.indexOf(d);
+    if(i >= 0 && bTrx[i] > 0 && bNsi[i] > 0 && byDate[d]){
+      var nsiT = (byDate[d].transactions || 0) * (bTrx[i] / bNsi[i]);
+      var nasp = naspArr ? (naspArr[i] != null ? +naspArr[i] : naspScalar) : naspScalar;
+      nmvSum += nsiT * nasp;
+      found = true;
+    }
+  });
+  return found ? Math.round(nmvSum) : null;
 }
 // MS CTR target escalar según bucket activo
 function getMsCtrTarget(){
@@ -1787,7 +1805,7 @@ function renderContainer(){
   var tgtDates=(D.targets&&D.targets.dates)||[];
   // NSI y NMV targets dinámicos
   var nsiTgt  = computeNsiTarget(dates, byDate);
-  var nmvTgt  = computeNmvTarget(nsiTgt);
+  var nmvTgt  = computeNmvTarget(dates, byDate);
   var tgtVal={
     sessions:       tgtAccum(tgt.sessions,       tgtDates, dates),
     nmv:            nmvTgt,
