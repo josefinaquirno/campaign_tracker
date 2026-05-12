@@ -1760,7 +1760,7 @@ function renderContainer(){
     a.nsi+=b.nsi;a.users_container+=b.users_container;a.users_vip+=b.users_vip;a.buyers+=b.buyers;return a;
   },{sessions:0,nmv:0,orders:0,transactions:0,nsi:0,users_container:0,users_vip:0,buyers:0});
   tot.cvr=tot.sessions>0?tot.orders/tot.sessions:0;
-  tot.nasp=tot.orders>0?tot.nmv/tot.orders:0;
+  tot.nasp=tot.nsi>0?tot.nmv/tot.nsi:0;
   tot.nsit=tot.transactions>0?tot.nsi/tot.transactions:0;
 
   // Total containers (shares)
@@ -1821,7 +1821,7 @@ function renderContainer(){
     {lbl:'SESIONES',          val:fNum(tot.sessions),                               sub:'Total containers campaña',   raw:tot.sessions,  tgtKey:'sessions'},
     {lbl:'NMV (USD)',         val:fNMV(tot.nmv),                                    sub:'168hs atrib.',               raw:tot.nmv,       tgtKey:'nmv'},
     {lbl:'SHARE NMV vs SITE', val:shareNMVSite!=null?fPct(shareNMVSite,2):'—',      sub:'Campaña / Total site',       raw:shareNMVSite,  tgtKey:'share_nmv'},
-    {lbl:'NASP',              val:fNMV(tot.nasp),                                   sub:'NMV / Orders',               raw:tot.nasp,      tgtKey:'nasp'},
+    {lbl:'NASP',              val:fNMV(tot.nasp),                                   sub:'NMV / NSI',                  raw:tot.nasp,      tgtKey:'nasp'},
     {lbl:'NSI/T',             val:tot.nsit?tot.nsit.toFixed(2):'—',                 sub:'NSI / Transactions',         raw:tot.nsi,       tgtKey:'nsi'},
     {lbl:'CVR',               val:fPct(tot.cvr,2),                                  sub:'Orders / Sessions',          raw:tot.cvr,       tgtKey:'cvr'}
   ];
@@ -1914,7 +1914,7 @@ function renderContainer(){
     });
     tblData=Object.values(vMap);
   }
-  tblData.forEach(function(r){r.cvr=r.sessions>0?r.orders/r.sessions:0;r.nasp=r.orders>0?r.nmv/r.orders:0;});
+  tblData.forEach(function(r){r.cvr=r.sessions>0?r.orders/r.sessions:0;r.nasp=r.nsi>0?r.nmv/r.nsi:0;});
   tblData.sort(function(a,b){ var av=a[SORT_COL.cnt]||0,bv=b[SORT_COL.cnt]||0; return SORT_ASC.cnt?av-bv:bv-av; });
 
   document.getElementById('cnt-tbl-badge').textContent=tblData.length+(CNT_VIEW==='container'?' containers':' verticales');
