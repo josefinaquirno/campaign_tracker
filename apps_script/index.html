@@ -1123,6 +1123,7 @@ function renderSummary(){
     cont_nmv_tgt: tgtArr(tgtCNT.nmv),
     cont_nmvpct:     dayV(function(d){var b=cntByDate[d],ts=tsMap[d];return b&&ts&&+ts.tgmv_usd>0?b.nmv/+ts.tgmv_usd:null;}),
     cont_nmvpct_tgt: tgtArr(tgtCNT.share_nmv),
+    cont_site_nmv:   dayV(function(d){var ts=tsMap[d];return ts&&+ts.tgmv_usd>0?+ts.tgmv_usd:null;}),
     cont_asp:     dayV(function(d){var b=cntByDate[d];return b&&b.nsi>0?b.nmv/b.nsi:null;}),
     cont_nsi:     dayV(function(d){var b=cntByDate[d];return b?b.nsi:null;}),
     cont_nsi_tgt: tgtArr(tgtCNT.nsi),
@@ -2910,7 +2911,8 @@ function opKPIs(){
   opSet('op-cnt-ses-v','op-cnt-ses-d',opN(cS),opDt(cS,cSt,false));
   var cN=opSum(OP.cont_nmv,i0,i1)||null,cNt=opSum(OP.cont_nmv_tgt,i0,i1)||null;
   opSet('op-cnt-nmv-v','op-cnt-nmv-d',opU(cN),opDt(cN,cNt,false));
-  var cNp=opAvg(OP.cont_nmvpct,i0,i1),cNpt=opAvg(OP.cont_nmvpct_tgt,i0,i1);
+  var _cNpNMV=opSum(OP.cont_nmv,i0,i1),_cNpSite=opSum(OP.cont_site_nmv,i0,i1);
+  var cNp=(_cNpSite>0)?_cNpNMV/_cNpSite:null,cNpt=opAvg(OP.cont_nmvpct_tgt,i0,i1);
   opSet('op-cnt-nmvp-v','op-cnt-nmvp-d',opP(cNp),opDt(cNp,cNpt,true));
   var _cAspNMV=opSum(OP.cont_nmv,i0,i1),_cAspNSI=opSum(OP.cont_nsi,i0,i1);
   var cAsp=(_cAspNSI>0)?_cAspNMV/_cAspNSI:null,cAspTgt=(D.targets&&D.targets.nasp!=null)?+D.targets.nasp:null;
