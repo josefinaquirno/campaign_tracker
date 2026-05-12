@@ -1486,7 +1486,7 @@ function renderMS(){
     bucketMap[b].camps.push(c);
   });
   BUCKET_ORDER.forEach(function(b){
-    if(bucketMap[b]) bucketMap[b].camps.sort(function(a,c){return c.clicks-a.clicks;});
+    if(bucketMap[b]) bucketMap[b].camps.sort(function(a,c){return c.ctr-a.ctr;});
   });
 
   var h='<table><thead><tr>'
