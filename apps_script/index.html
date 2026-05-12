@@ -380,6 +380,7 @@
         </div>
         <div id="ldgo-tbl-body"></div>
       </div>
+      <div id="cmp-landing-orig"></div>
     </div>
 
     <!-- ==================== OFERTA TAB ==================== -->
@@ -2003,8 +2004,8 @@ function renderInlineComparison(placement, containerId){
   var tgtPl=(D.targets&&D.targets[placement])||{};
   var tgtDatesArr=(D.targets&&D.targets.dates)||[];
 
-  var curSrc  = placement==='ms'?D.ms      :placement==='landing'?D.landing      :D.container;
-  var histSrc = placement==='ms'?hist.ms   :placement==='landing'?hist.landing    :hist.container;
+  var curSrc  = placement==='ms'?D.ms      :placement==='landing'?D.landing      :placement==='landing-orig'?D.landing_original      :D.container;
+  var histSrc = placement==='ms'?hist.ms   :placement==='landing'?hist.landing    :placement==='landing-orig'?(hist.landing_original||hist.landing):hist.container;
 
   var curMap  = cmpAggByDate(curSrc);
   var histMap = cmpAggByDate(histSrc);
@@ -2582,6 +2583,7 @@ function renderLandingOrig(){
     }).join('')+'</tr>';
   });
   document.getElementById('ldgo-tbl-body').innerHTML=h+'</tbody></table>';
+  renderInlineComparison('landing-orig','cmp-landing-orig');
 }
 
 // ──────────────────────────────────────────────
