@@ -1922,6 +1922,16 @@ function renderContainer(){
   var cntToWrap=document.getElementById('cnt-to-filter');
   if(cntToWrap) cntToWrap.innerHTML=_toFilterHtml();
 
+  // Totals row
+  var totRow={name:'TOTAL',sessions:0,nmv:0,orders:0,transactions:0,nsi:0,users_container:0,users_vip:0,buyers:0};
+  tblData.forEach(function(r){
+    totRow.sessions+=r.sessions;totRow.nmv+=r.nmv;totRow.orders+=r.orders;
+    totRow.transactions+=r.transactions;totRow.nsi+=r.nsi;
+    totRow.users_container+=r.users_container;totRow.users_vip+=r.users_vip;totRow.buyers+=r.buyers;
+  });
+  totRow.cvr=totRow.sessions>0?totRow.orders/totRow.sessions:0;
+  totRow.nasp=totRow.nsi>0?totRow.nmv/totRow.nsi:0;
+
   var h='<table><thead><tr>'+colsCnt.map(function(c){
     var ar=SORT_COL.cnt===c.k?(SORT_ASC.cnt?' ▲':' ▼'):'';
     return '<th onclick="sortCnt(\''+c.k+'\')" style="'+(c.r?'text-align:right':'')+'">'+c.l+ar+'</th>';
@@ -1935,7 +1945,16 @@ function renderContainer(){
       return '<td>'+fNum(v)+'</td>';
     }).join('')+'</tr>';
   });
-  h+='</tbody></table>';
+  h+='</tbody><tfoot><tr style="background:#1a1a2e;color:#FFE600;font-weight:700;border-top:2px solid #FFE600">';
+  h+=colsCnt.map(function(c){
+    var v=totRow[c.k];
+    var st='padding:8px 10px;'+(c.r?'text-align:right':'');
+    if(!c.r) return '<td style="'+st+'">'+v+'</td>';
+    if(c.rate) return '<td style="'+st+'">'+fPct(v,2)+'</td>';
+    if(c.nmv)  return '<td style="'+st+'">'+fNMV(v)+'</td>';
+    return '<td style="'+st+'">'+fNum(v)+'</td>';
+  }).join('');
+  h+='</tr></tfoot></table>';
   document.getElementById('cnt-tbl-body').innerHTML=h;
   renderInlineComparison('container','cmp-container');
 }
