@@ -2912,7 +2912,8 @@ function opKPIs(){
   opSet('op-cnt-nmv-v','op-cnt-nmv-d',opU(cN),opDt(cN,cNt,false));
   var cNp=opAvg(OP.cont_nmvpct,i0,i1),cNpt=opAvg(OP.cont_nmvpct_tgt,i0,i1);
   opSet('op-cnt-nmvp-v','op-cnt-nmvp-d',opP(cNp),opDt(cNp,cNpt,true));
-  var cAsp=opAvg(OP.cont_asp,i0,i1),cAspTgt=(D.targets&&D.targets.nasp!=null)?+D.targets.nasp:null;
+  var _cAspNMV=opSum(OP.cont_nmv,i0,i1),_cAspNSI=opSum(OP.cont_nsi,i0,i1);
+  var cAsp=(_cAspNSI>0)?_cAspNMV/_cAspNSI:null,cAspTgt=(D.targets&&D.targets.nasp!=null)?+D.targets.nasp:null;
   opSet('op-cnt-asp-v','op-cnt-asp-d',opU(cAsp),opDt(cAsp,cAspTgt,false));
   var cNsi=opSum(OP.cont_nsi,i0,i1)||null,cNsit=opSum(OP.cont_nsi_tgt,i0,i1)||null;
   opSet('op-cnt-nsi-v','op-cnt-nsi-d',opN(cNsi),opDt(cNsi,cNsit,false));
