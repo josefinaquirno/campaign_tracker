@@ -475,6 +475,7 @@ var OPT = { opt_landing: [], refreshed_at: '' };
 var OPT_LDG_FILTER = 'ALL';
 var OPT_DATE_FILTER_OPT = [];
 var OPT_GROUP_FILTER = 'TODOS';
+var OPT_BTN_SEARCH = '';
 var TO_FILTER = 'ALL'; // 'ALL' | 'NO_TO'
 var ST = { dates: [], search_terms: [], refreshed_at: '' };
 // Multi-campaign state
@@ -571,7 +572,7 @@ function switchCampaign(id){
   LDG_FILTER = 'ALL'; LDGO_FILTER = 'ALL';
   MS_BUCKET = 'ALL'; MS_SEG_FILTER = 'ALL'; CNT_DATE_FILTER = [];
   MS_DATE_FILTER = []; LDG_DATE_FILTER = []; LDGO_DATE_FILTER = []; OP_DATE_FILTER = [];
-  OPT_DATE_FILTER_OPT = [];
+  OPT_DATE_FILTER_OPT = []; OPT_BTN_SEARCH = '';
   window.OP_DATE_IDX_SET = null;
   document.getElementById('loading').style.display='block';
   document.getElementById('content').style.display='none';
@@ -2767,6 +2768,13 @@ function setOptDateFilter(v){
   optRenderTable();
 }
 
+function optSetSearch(v){
+  OPT_BTN_SEARCH=v;
+  // Actualizar el ✕ sin re-renderizar todo
+  var input=document.getElementById('opt-btn-search');
+  if(input&&input.value!==v) input.value=v;
+  optRenderTable();
+}
 function optSetGroup(v,btn){
   OPT_GROUP_FILTER=v;
   btn.parentNode.querySelectorAll('.pill').forEach(function(b){b.classList.remove('active');});
@@ -2828,6 +2836,10 @@ function optRenderTable(){
   if(OPT_GROUP_FILTER!=='TODOS') buttons=buttons.filter(function(b){return b.group===OPT_GROUP_FILTER;});
   if(!buttons.length){el.innerHTML='<p style="color:#aaa;font-size:13px;padding:20px 0">Sin botones para el filtro seleccionado</p>';return;}
 
+  if(OPT_BTN_SEARCH.trim()){
+    var q=OPT_BTN_SEARCH.trim().toLowerCase();
+    buttons=buttons.filter(function(b){ return b.button_name.toLowerCase().indexOf(q)>=0; });
+  }
   var ranked=optRankButtons(buttons, OPT_WEIGHTS.ctr, OPT_WEIGHTS.cvr, OPT_WEIGHTS.gmv);
   var maxScore=ranked[0]?ranked[0].score:1;
 
@@ -2949,6 +2961,13 @@ function renderOptLanding(){
     +'</div>'
     +'<span class="opt-w-total '+(tot===100?'opt-w-ok':'opt-w-warn')+'" id="opt-w-total">Total: '+tot+'%</span>'
     +'<button class="pill" onclick="optResetWeights()" style="margin:0">Reset</button>'
+    +'</div>'
+    +'<div style="margin-bottom:12px;position:relative;max-width:320px;">'
+    +'<input id="opt-btn-search" type="text" placeholder="🔍 Buscar botón..." value="'+OPT_BTN_SEARCH+'"'
+    +' oninput="optSetSearch(this.value)"'
+    +' style="width:100%;background:#fff;color:#1a1a2e;border:1.5px solid #ddd;border-radius:6px;padding:7px 32px 7px 12px;font-size:12px;font-family:inherit;outline:none;"'
+    +' onfocus="this.style.borderColor=\'#FFE600\'" onblur="this.style.borderColor=\'#ddd\'">'
+    +(OPT_BTN_SEARCH ? '<span onclick="optSetSearch(\'\')" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);cursor:pointer;color:#aaa;font-size:14px;">✕</span>' : '')
     +'</div>'
     +'<div id="opt-table-wrap"></div>';
 
