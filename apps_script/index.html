@@ -2770,10 +2770,9 @@ function setOptDateFilter(v){
 
 function optSetSearch(v){
   OPT_BTN_SEARCH=v;
-  // Actualizar el ✕ sin re-renderizar todo
-  var input=document.getElementById('opt-btn-search');
-  if(input&&input.value!==v) input.value=v;
-  optRenderTable();
+  var dbg=document.getElementById('opt-search-dbg');
+  if(dbg) dbg.textContent='🔎 filtrando: "'+v+'"';
+  try { optRenderTable(); } catch(e){ if(dbg) dbg.textContent='❌ error: '+e.message; }
 }
 function optSetGroup(v,btn){
   OPT_GROUP_FILTER=v;
@@ -2966,12 +2965,15 @@ function renderOptLanding(){
     +'<span class="opt-w-total '+(tot===100?'opt-w-ok':'opt-w-warn')+'" id="opt-w-total">Total: '+tot+'%</span>'
     +'<button class="pill" onclick="optResetWeights()" style="margin:0">Reset</button>'
     +'</div>'
-    +'<div style="margin-bottom:12px;position:relative;max-width:320px;">'
+    +'<div style="margin-bottom:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'
+    +'<div style="position:relative;width:320px;">'
     +'<input id="opt-btn-search" type="text" placeholder="🔍 Buscar botón..." value="'+OPT_BTN_SEARCH+'"'
     +' oninput="optSetSearch(this.value)"'
     +' style="width:100%;background:#fff;color:#1a1a2e;border:1.5px solid #ddd;border-radius:6px;padding:7px 32px 7px 12px;font-size:12px;font-family:inherit;outline:none;"'
     +' onfocus="this.style.borderColor=\'#FFE600\'" onblur="this.style.borderColor=\'#ddd\'">'
     +(OPT_BTN_SEARCH ? '<span onclick="optSetSearch(\'\')" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);cursor:pointer;color:#aaa;font-size:14px;">✕</span>' : '')
+    +'</div>'
+    +'<span id="opt-search-dbg" style="font-size:11px;color:#aaa;"></span>'
     +'</div>'
     +'<div id="opt-table-wrap"></div>';
 
