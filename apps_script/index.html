@@ -490,6 +490,7 @@ var CNT_DATE_FILTER = [];
 var MS_DATE_FILTER  = [];
 var LDG_DATE_FILTER = [];
 var LDGO_DATE_FILTER= [];
+var OP_DATE_FILTER  = [];
 var CMP_IDX    = '';
 var SORT_COL   = { ms:'clicks', ldg:'sessions', cnt:'cvr' };
 var SORT_ASC   = { ms:false, ldg:false, cnt:false };
@@ -568,7 +569,8 @@ function switchCampaign(id){
   COMP_D = null; COMP_CAMPAIGN = null; CMP_IDX = '';
   LDG_FILTER = 'ALL'; LDGO_FILTER = 'ALL';
   MS_BUCKET = 'ALL'; MS_SEG_FILTER = 'ALL'; CNT_DATE_FILTER = [];
-  MS_DATE_FILTER = []; LDG_DATE_FILTER = []; LDGO_DATE_FILTER = [];
+  MS_DATE_FILTER = []; LDG_DATE_FILTER = []; LDGO_DATE_FILTER = []; OP_DATE_FILTER = [];
+  window.OP_DATE_IDX_SET = null;
   document.getElementById('loading').style.display='block';
   document.getElementById('content').style.display='none';
   buildCampaignSelector();
@@ -2909,14 +2911,21 @@ function renderOptLanding(){
 function opDayIdx(s){return Math.round((new Date(s+'T00:00:00')-window.OP_CAMP_START)/86400000);}
 function opSum(arr,i0,i1){
   var toIdx=window.OP_TO_IDX_SET||{};
+  var dtIdx=window.OP_DATE_IDX_SET||null;
   return (arr||[]).slice(i0,i1+1).reduce(function(a,v,j){
-    if(toIdx[i0+j]) return a; // saltar días TO
+    var idx=i0+j;
+    if(toIdx[idx]) return a;
+    if(dtIdx&&!dtIdx[idx]) return a;
     return a+(v||0);
   },0);
 }
 function opAvg(arr,i0,i1){
   var toIdx=window.OP_TO_IDX_SET||{};
-  var v=(arr||[]).slice(i0,i1+1).filter(function(x,j){return !toIdx[i0+j]&&x!==null;});
+  var dtIdx=window.OP_DATE_IDX_SET||null;
+  var v=(arr||[]).slice(i0,i1+1).filter(function(x,j){
+    var idx=i0+j;
+    return !toIdx[idx]&&(dtIdx===null||dtIdx[idx])&&x!==null;
+  });
   return v.length?v.reduce(function(a,x){return a+x;},0)/v.length:null;
 }
 function opN(n){if(n===null||n===undefined)return '—';if(Math.abs(n)>=1e6)return (n/1e6).toFixed(1)+'M';if(Math.abs(n)>=1e3)return (n/1e3).toFixed(1)+'K';return Math.round(n).toString();}
@@ -2936,13 +2945,25 @@ function opSet(vi,di,vt,dt){
 function opKPIs(){
   var OP=window.OP_DATA,CD=window.OP_CAMP_DATES,DL=window.OP_DAY_LABELS;
   if(!OP||!CD)return;
-  var from=document.getElementById('op-from'),to=document.getElementById('op-to');
-  if(!from||!to)return;
   var maxIdx=CD.length-1;
-  var i0=Math.max(0,opDayIdx(from.value)),i1=Math.min(maxIdx,opDayIdx(to.value));
-  if(i0>i1)return;
+  var i0=0, i1=maxIdx;
+  // Computar OP_DATE_IDX_SET desde OP_DATE_FILTER
+  var dtF=OP_DATE_FILTER||[];
+  if(dtF.length>0){
+    var dtIdx={}; dtF.forEach(function(d){var i=CD.indexOf(d);if(i>=0)dtIdx[i]=1;});
+    window.OP_DATE_IDX_SET=dtIdx;
+  } else {
+    window.OP_DATE_IDX_SET=null;
+  }
   var lbl=document.getElementById('op-period-lbl');
-  if(lbl)lbl.textContent=(i0===0&&i1===maxIdx)?(DL[0]+' → '+DL[maxIdx]+' (acum.)'):(DL[i0]+' → '+DL[i1]+' (acum.)');
+  if(lbl){
+    if(dtF.length>0){
+      var selLbls=dtF.map(function(d){return DL[CD.indexOf(d)];}).filter(Boolean);
+      lbl.textContent=selLbls.join(', ')+' (sel.)';
+    } else {
+      lbl.textContent=DL[0]+' → '+DL[maxIdx]+' (acum.)';
+    }
+  }
   // MS
   var msCtr=opAvg(OP.ms_ctr,i0,i1),msTgt=opAvg(OP.ms_ctr_tgt,i0,i1);
   opSet('op-ms-ctr-v','op-ms-ctr-d',opP(msCtr),opDt(msCtr,msTgt,true));
@@ -3042,15 +3063,20 @@ function opFunnel(view){
 function opSetPeriod(period){
   var CD=window.OP_CAMP_DATES; if(!CD) return;
   var cs=CD[0], ce=CD[CD.length-1];
-  var from, to;
-  from=cs; // siempre desde el inicio de campaña
-  to = period==='acum' ? ce : period; // hasta el día elegido
+  if(period==='acum'){
+    OP_DATE_FILTER=[];
+  } else {
+    OP_DATE_FILTER=_toggleDate(OP_DATE_FILTER, period);
+  }
+  // op-from/op-to siempre rango completo (el filtrado lo hace OP_DATE_IDX_SET)
   var fEl=document.getElementById('op-from'), tEl=document.getElementById('op-to');
-  if(fEl) fEl.value=from;
-  if(tEl) tEl.value=to;
-  // Update pill active state
+  if(fEl) fEl.value=cs;
+  if(tEl) tEl.value=ce;
+  // Update pill active state (multi-select)
+  var isAll=OP_DATE_FILTER.length===0;
   document.querySelectorAll('[id^="op-pill-"]').forEach(function(b){
-    b.classList.toggle('active', b.id==='op-pill-'+period);
+    if(b.id==='op-pill-acum') b.classList.toggle('active', isAll);
+    else { var d=b.id.replace('op-pill-',''); b.classList.toggle('active', !isAll&&OP_DATE_FILTER.indexOf(d)>=0); }
   });
   opKPIs();
 }
