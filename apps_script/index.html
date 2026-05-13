@@ -274,7 +274,7 @@
 
       <div class="table-card">
         <div class="table-head">
-          <div class="table-head-title">Detalle por Line Item</div>
+          <div class="table-head-title">Detalle por Main Slider</div>
           <div class="tbl-badge" id="ms-tbl-badge"></div>
         </div>
         <div id="ms-tbl-body"></div>
@@ -1559,6 +1559,16 @@ function renderMS(){
       });
     }
   });
+  // Fila de totales
+  var totalClicks=0, totalPrints=0;
+  BUCKET_ORDER.forEach(function(b){ if(bucketMap[b]){totalClicks+=bucketMap[b].clicks; totalPrints+=bucketMap[b].prints;} });
+  var totalCtr=totalPrints>0?totalClicks/totalPrints:0;
+  h+='<tr style="background:#1a1a2e;border-top:2px solid #FFE600">'
+    +'<td style="padding:9px 10px;font-weight:700;color:#FFE600;font-size:12px">TOTAL</td>'
+    +'<td style="text-align:right;padding:9px 10px;font-weight:700;color:#fff">'+fNum(totalClicks)+'</td>'
+    +'<td style="text-align:right;padding:9px 10px;font-weight:700;color:#fff">'+fNum(totalPrints)+'</td>'
+    +'<td style="text-align:right;padding:9px 10px;font-weight:700;color:#FFE600">'+fPct(totalCtr,2)+'</td>'
+    +'</tr>';
   h+='</tbody></table>';
   document.getElementById('ms-tbl-body').innerHTML=h;
   renderInlineComparison('ms','cmp-ms');
