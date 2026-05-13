@@ -1,5 +1,20 @@
 [
   {
+    "id": "cyber_monday_2025",
+    "name": "CYBER MONDAY 2025",
+    "start": "2025-11-03",
+    "end": "2025-11-11",
+    "status": "closed",
+    "campaign_type": "T1",
+    "data_file": null,
+    "targets_file": null,
+    "oferta_file": null,
+    "calidad_file": "calidad_cm2025.json",
+    "to_dates": [],
+    "container_groups": {},
+    "images": {}
+  },
+  {
     "id": "hotsale_2025",
     "name": "HOT SALE 2025",
     "start": "2025-05-12",

@@ -2042,29 +2042,44 @@ function setCmpCampaign(id){
   if(!camp) return;
   COMP_CAMPAIGN=camp; CMP_IDX='1'; COMP_C_KPIS=null;
   if(typeof google!=='undefined'&&google.script){
-    google.script.run
-      .withSuccessHandler(function(d){
-        COMP_D=d; renderAll();
-        // También cargamos calidad de la campaña de comparación
+    function _loadCompCalidad(){
+      if(camp.calidad_file){
         google.script.run
           .withSuccessHandler(function(cc){ COMP_C_KPIS=computeCalKpis(cc); if(ACTIVE_TAB==='summary') opKPIs(); })
-          .withFailureHandler(function(){})
+          .withFailureHandler(function(){ COMP_C_KPIS=null; if(ACTIVE_TAB==='summary') opKPIs(); })
           .getCalidadData(camp.calidad_file, camp.oferta_file);
-      })
-      .withFailureHandler(function(){COMP_D=null; renderAll();})
-      .getJsonData(camp.data_file);
+      }
+    }
+    if(camp.data_file){
+      google.script.run
+        .withSuccessHandler(function(d){
+          COMP_D=d; renderAll();
+          _loadCompCalidad();
+        })
+        .withFailureHandler(function(){COMP_D=null; renderAll();})
+        .getJsonData(camp.data_file);
+    } else {
+      COMP_D=null; renderAll();
+      _loadCompCalidad();
+    }
   } else {
-    fetch((camp.data_file||'data.json')+'?v='+Date.now())
-      .then(function(r){return r.json();})
-      .then(function(d){
-        COMP_D=d; renderAll();
-        var cf=camp.calidad_file||'calidad.json';
-        fetch(cf+'?v='+Date.now())
+    function _loadCompCalidadFetch(){
+      if(camp.calidad_file){
+        fetch(camp.calidad_file+'?v='+Date.now())
           .then(function(r){return r.json();})
           .then(function(cc){ COMP_C_KPIS=computeCalKpis(cc); if(ACTIVE_TAB==='summary') opKPIs(); })
-          .catch(function(){});
-      })
-      .catch(function(){COMP_D=null; renderAll();});
+          .catch(function(){ COMP_C_KPIS=null; });
+      }
+    }
+    if(camp.data_file){
+      fetch(camp.data_file+'?v='+Date.now())
+        .then(function(r){return r.json();})
+        .then(function(d){ COMP_D=d; renderAll(); _loadCompCalidadFetch(); })
+        .catch(function(){COMP_D=null; renderAll();});
+    } else {
+      COMP_D=null; renderAll();
+      _loadCompCalidadFetch();
+    }
   }
 }
 function setSumMSFilter(v){ SUM_MS_FILTER=v; renderSummary(); }
