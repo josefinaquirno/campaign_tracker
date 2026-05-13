@@ -2839,6 +2839,10 @@ function optRenderTable(){
   if(OPT_BTN_SEARCH.trim()){
     var q=OPT_BTN_SEARCH.trim().toLowerCase();
     buttons=buttons.filter(function(b){ return b.button_name.toLowerCase().indexOf(q)>=0; });
+    if(!buttons.length){
+      el.innerHTML='<p style="color:#aaa;font-size:13px;padding:20px 0">Sin resultados para <strong style="color:#1a1a2e">"'+OPT_BTN_SEARCH+'"</strong></p>';
+      return;
+    }
   }
   var ranked=optRankButtons(buttons, OPT_WEIGHTS.ctr, OPT_WEIGHTS.cvr, OPT_WEIGHTS.gmv);
   var maxScore=ranked[0]?ranked[0].score:1;
@@ -2970,6 +2974,10 @@ function renderOptLanding(){
     +(OPT_BTN_SEARCH ? '<span onclick="optSetSearch(\'\')" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);cursor:pointer;color:#aaa;font-size:14px;">✕</span>' : '')
     +'</div>'
     +'<div id="opt-table-wrap"></div>';
+
+  // Adjuntar event listener explícitamente (más robusto que inline oninput)
+  var srch=document.getElementById('opt-btn-search');
+  if(srch) srch.addEventListener('input', function(){ optSetSearch(this.value); });
 
   optRenderTable();
 }
