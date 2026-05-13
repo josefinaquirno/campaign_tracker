@@ -1163,7 +1163,8 @@ function renderSummary(){
     cont_nsi:     dayV(function(d){var b=cntByDate[d];return b?b.nsi:null;}),
     cont_nsi_tgt: tgtArr(tgtCNT.nsi),
     cont_cvr:     dayV(function(d){var b=cntByDate[d];return b&&b.ses>0?b.ord/b.ses:null;}),
-    cont_cvr_tgt: tgtArr(tgtCNT.cvr)
+    cont_cvr_tgt: tgtArr(tgtCNT.cvr),
+    nasp_tgt:     Array.isArray(tgt.nasp) ? tgtArr(tgt.nasp) : CAMP_DATES.map(function(){ return tgt.nasp!=null?+tgt.nasp:null; })
   };
 
   // Calidad from C
@@ -3003,7 +3004,7 @@ function opKPIs(){
   var cNp=(_cNpSite>0)?_cNpNMV/_cNpSite:null,cNpt=opAvg(OP.cont_nmvpct_tgt,i0,i1);
   opSet('op-cnt-nmvp-v','op-cnt-nmvp-d',opP(cNp),opDt(cNp,cNpt,true));
   var _cAspNMV=opSum(OP.cont_nmv,i0,i1),_cAspNSI=opSum(OP.cont_nsi,i0,i1);
-  var cAsp=(_cAspNSI>0)?_cAspNMV/_cAspNSI:null,cAspTgt=(D.targets&&D.targets.nasp!=null)?+D.targets.nasp:null;
+  var cAsp=(_cAspNSI>0)?_cAspNMV/_cAspNSI:null,cAspTgt=opAvg(OP.nasp_tgt,i0,i1);
   opSet('op-cnt-asp-v','op-cnt-asp-d',opU(cAsp),opDt(cAsp,cAspTgt,false));
   var cNsi=opSum(OP.cont_nsi,i0,i1)||null,cNsit=opSum(OP.cont_nsi_tgt,i0,i1)||null;
   opSet('op-cnt-nsi-v','op-cnt-nsi-d',opN(cNsi),opDt(cNsi,cNsit,false));
