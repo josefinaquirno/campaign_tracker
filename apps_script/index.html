@@ -1938,10 +1938,12 @@ function renderContainer(){
     {k:'name',l:'Nombre',r:false},
     {k:'sessions',l:'Sessions',r:true},
     {k:'nmv',l:'NMV',r:true,nmv:true},
+    {k:'share_nmv',l:'Share NMV',r:true,rate:true},
     {k:'orders',l:'Orders',r:true},
     {k:'cvr',l:'CVR',r:true,rate:true},
     {k:'nasp',l:'NASP',r:true,nmv:true},
     {k:'nsi',l:'NSI',r:true},
+    {k:'nsi_t',l:'NSI/T',r:true,dec1:true},
     {k:'buyers',l:'Buyers',r:true},
     {k:'users_container',l:'Users Cnt.',r:true},
     {k:'users_vip',l:'Users VIP',r:true}
@@ -1983,6 +1985,13 @@ function renderContainer(){
   });
   totRow.cvr=totRow.sessions>0?totRow.orders/totRow.sessions:0;
   totRow.nasp=totRow.nsi>0?totRow.nmv/totRow.nsi:0;
+  totRow.share_nmv=1; // 100% por definición
+  totRow.nsi_t=totRow.orders>0?totRow.nsi/totRow.orders:0;
+  // Calcular share_nmv y nsi_t por fila (necesita totRow.nmv)
+  tblData.forEach(function(r){
+    r.share_nmv=totRow.nmv>0?r.nmv/totRow.nmv:0;
+    r.nsi_t=r.orders>0?r.nsi/r.orders:0;
+  });
 
   var h='<table><thead><tr>'+colsCnt.map(function(c){
     var ar=SORT_COL.cnt===c.k?(SORT_ASC.cnt?' ▲':' ▼'):'';
@@ -1991,10 +2000,11 @@ function renderContainer(){
   tblData.forEach(function(row){
     h+='<tr>'+colsCnt.map(function(c){
       var v=row[c.k];
-      if(c.rate) return '<td>'+fPct(v,2)+'</td>';
-      if(c.nmv)  return '<td>'+fNMV(v)+'</td>';
+      if(c.rate) return '<td style="text-align:right">'+fPct(v,2)+'</td>';
+      if(c.nmv)  return '<td style="text-align:right">'+fNMV(v)+'</td>';
+      if(c.dec1) return '<td style="text-align:right">'+(v!=null?(+v).toFixed(1):'—')+'</td>';
       if(!c.r)   return '<td style="max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+v+'</td>';
-      return '<td>'+fNum(v)+'</td>';
+      return '<td style="text-align:right">'+fNum(v)+'</td>';
     }).join('')+'</tr>';
   });
   h+='</tbody><tfoot><tr style="background:#1a1a2e;color:#FFE600;font-weight:700;border-top:2px solid #FFE600">';
@@ -2004,6 +2014,7 @@ function renderContainer(){
     if(!c.r) return '<td style="'+st+'">'+v+'</td>';
     if(c.rate) return '<td style="'+st+'">'+fPct(v,2)+'</td>';
     if(c.nmv)  return '<td style="'+st+'">'+fNMV(v)+'</td>';
+    if(c.dec1) return '<td style="'+st+'">'+(v!=null?(+v).toFixed(1):'—')+'</td>';
     return '<td style="'+st+'">'+fNum(v)+'</td>';
   }).join('');
   h+='</tr></tfoot></table>';
