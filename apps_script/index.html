@@ -2837,7 +2837,7 @@ function optRenderTable(){
 
   if(OPT_BTN_SEARCH.trim()){
     var q=OPT_BTN_SEARCH.trim().toLowerCase();
-    buttons=buttons.filter(function(b){ return b.button_name.toLowerCase().indexOf(q)>=0; });
+    buttons=buttons.filter(function(b){ return b.button_name && b.button_name.toLowerCase().indexOf(q)>=0; });
     if(!buttons.length){
       el.innerHTML='<p style="color:#aaa;font-size:13px;padding:20px 0">Sin resultados para <strong style="color:#1a1a2e">"'+OPT_BTN_SEARCH+'"</strong></p>';
       return;
