@@ -544,7 +544,7 @@ function load(){
   var onCampaigns = function(campaigns){
     // Excluir upcoming del selector — solo active y closed son visibles
     CAMPAIGNS = (campaigns || []).filter(function(c){return c.status!=='upcoming';});
-    ACTIVE_CAMPAIGN = CAMPAIGNS.filter(function(c){return c.status==='active';})[0]
+    ACTIVE_CAMPAIGN = CAMPAIGNS.filter(function(c){return c.status==='active'&&!c.comparison_only;})[0]
                    || CAMPAIGNS[CAMPAIGNS.length-1] || null;
     if(ACTIVE_CAMPAIGN) CAL_CONTAINER_GROUPS = ACTIVE_CAMPAIGN.container_groups || {};
     buildCampaignSelector();
@@ -587,7 +587,7 @@ function buildCampaignSelector(){
     el.innerHTML='<span style="font-size:11px;color:#bbb">—</span>';
     return;
   }
-  el.innerHTML = CAMPAIGNS.map(function(c){
+  el.innerHTML = CAMPAIGNS.filter(function(c){return !c.comparison_only;}).map(function(c){
     var active = ACTIVE_CAMPAIGN && c.id === ACTIVE_CAMPAIGN.id;
     var dates = c.start.slice(5).replace('-','/') + ' → ' + c.end.slice(5).replace('-','/');
     return '<button class="pill'+(active?' active':'')+'" onclick="switchCampaign(\''+c.id+'\')">'

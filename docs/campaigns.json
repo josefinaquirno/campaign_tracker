@@ -6,6 +6,7 @@
     "end": "2025-11-11",
     "status": "closed",
     "campaign_type": "T1",
+    "comparison_only": true,
     "data_file": null,
     "targets_file": null,
     "oferta_file": null,
