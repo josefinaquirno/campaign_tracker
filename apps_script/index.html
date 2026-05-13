@@ -486,10 +486,10 @@ var CH = {};
 var ACTIVE_TAB = 'summary';
 var LDG_FILTER = 'ALL';
 var CNT_VIEW        = 'container';
-var CNT_DATE_FILTER = 'ALL';
-var MS_DATE_FILTER  = 'ALL';
-var LDG_DATE_FILTER = 'ALL';
-var LDGO_DATE_FILTER= 'ALL';
+var CNT_DATE_FILTER = [];
+var MS_DATE_FILTER  = [];
+var LDG_DATE_FILTER = [];
+var LDGO_DATE_FILTER= [];
 var CMP_IDX    = '';
 var SORT_COL   = { ms:'clicks', ldg:'sessions', cnt:'cvr' };
 var SORT_ASC   = { ms:false, ldg:false, cnt:false };
@@ -567,8 +567,8 @@ function switchCampaign(id){
   CAL_CONTAINER_GROUPS = camp.container_groups || {};
   COMP_D = null; COMP_CAMPAIGN = null; CMP_IDX = '';
   LDG_FILTER = 'ALL'; LDGO_FILTER = 'ALL';
-  MS_BUCKET = 'ALL'; MS_SEG_FILTER = 'ALL'; CNT_DATE_FILTER = 'ALL';
-  MS_DATE_FILTER = 'ALL'; LDG_DATE_FILTER = 'ALL'; LDGO_DATE_FILTER = 'ALL';
+  MS_BUCKET = 'ALL'; MS_SEG_FILTER = 'ALL'; CNT_DATE_FILTER = [];
+  MS_DATE_FILTER = []; LDG_DATE_FILTER = []; LDGO_DATE_FILTER = [];
   document.getElementById('loading').style.display='block';
   document.getElementById('content').style.display='none';
   buildCampaignSelector();
@@ -943,18 +943,31 @@ function _toFilterHtml(){
     +'<button class="pill to-filter-btn '+(TO_FILTER==='ALL'?'active':'')+'" data-toval="ALL" onclick="setToFilter(\'ALL\',this)">Con TO</button>'
     +'<button class="pill to-filter-btn '+(TO_FILTER==='NO_TO'?'active':'')+'" data-toval="NO_TO" onclick="setToFilter(\'NO_TO\',this)">Sin TO</button>';
 }
-// ── Date pills helper (Acum. + per-day) ──────────────────
+// ── Date pills helper (Acum. + per-day, multi-select) ────
+function _dateFilterIsAll(f){ return !Array.isArray(f) || f.length===0; }
+function _filterDates(allDates, f){
+  if(_dateFilterIsAll(f)) return allDates;
+  return allDates.filter(function(d){ return f.indexOf(d)>=0; });
+}
+function _toggleDate(current, v){
+  if(v==='ALL') return [];
+  var c=current.slice(), i=c.indexOf(v);
+  if(i>=0) c.splice(i,1); else c.push(v);
+  return c;
+}
 function _datePillsHtml(allDates, current, setterName){
-  var h='<button class="op-fbtn '+(current==='ALL'?'active':'')+'" onclick="'+setterName+'(\'ALL\')">Acum.</button>';
+  var isAll=_dateFilterIsAll(current);
+  var h='<button class="op-fbtn '+(isAll?'active':'')+'" onclick="'+setterName+'(\'ALL\')">Acum.</button>';
   allDates.forEach(function(d){
     var lbl=d.slice(5).replace(/^0/,'').replace('-','/');
-    h+='<button class="op-fbtn '+(current===d?'active':'')+'" onclick="'+setterName+'(\''+d+'\')">'+lbl+'</button>';
+    var on=!isAll&&current.indexOf(d)>=0;
+    h+='<button class="op-fbtn '+(on?'active':'')+'" onclick="'+setterName+'(\''+d+'\')">'+lbl+'</button>';
   });
   return h;
 }
-function setMSDateFilter(v){ MS_DATE_FILTER=v; renderMS(); }
-function setLdgDateFilter(v){ LDG_DATE_FILTER=v; renderLanding(); }
-function setLdgoDateFilter(v){ LDGO_DATE_FILTER=v; renderLandingOrig(); }
+function setMSDateFilter(v){ MS_DATE_FILTER=_toggleDate(MS_DATE_FILTER,v); renderMS(); }
+function setLdgDateFilter(v){ LDG_DATE_FILTER=_toggleDate(LDG_DATE_FILTER,v); renderLanding(); }
+function setLdgoDateFilter(v){ LDGO_DATE_FILTER=_toggleDate(LDGO_DATE_FILTER,v); renderLandingOrig(); }
 
 function setToFilter(v, btn){
   TO_FILTER = v;
@@ -1379,14 +1392,14 @@ function renderMS(){
   var byDate = {};
   filtered.forEach(function(r){ var d=r.fecha; if(!byDate[d]) byDate[d]={clicks:0,prints:0}; byDate[d].clicks+=+r.clicks||0; byDate[d].prints+=+r.prints||0; });
   var allDatesMS = Object.keys(byDate).sort();
-  var dates = MS_DATE_FILTER==='ALL' ? allDatesMS : allDatesMS.filter(function(d){ return d===MS_DATE_FILTER; });
+  var dates = _filterDates(allDatesMS, MS_DATE_FILTER);
   var msDateWrap=document.getElementById('ms-date-filter');
   if(msDateWrap) msDateWrap.innerHTML=_datePillsHtml(allDatesMS, MS_DATE_FILTER, 'setMSDateFilter');
-  var lastDate = (MS_DATE_FILTER==='ALL' ? dates[dates.length-1] : MS_DATE_FILTER)||'—';
+  var lastDate = dates[dates.length-1]||'—';
   document.getElementById('ms-badge-period').textContent = 'hasta '+fDate(lastDate);
 
   // Date-filtered rows — used for KPIs, segmentation calcs and table
-  var dateFiltered = MS_DATE_FILTER==='ALL' ? filtered : filtered.filter(function(r){ return r.fecha===MS_DATE_FILTER; });
+  var dateFiltered = _dateFilterIsAll(MS_DATE_FILTER) ? filtered : filtered.filter(function(r){ return MS_DATE_FILTER.indexOf(r.fecha)>=0; });
 
   // Aggregate totals from date-filtered data
   var tot = dates.reduce(function(a,d){ a.clicks+=byDate[d].clicks; a.prints+=byDate[d].prints; return a; },{clicks:0,prints:0});
@@ -1583,7 +1596,7 @@ function renderLanding(){
     b.nsi+=+r.nsi||0; b.buyers+=+r.buyers||0;
   });
   var allDatesLdg = activeDates(Object.keys(byDate).sort());
-  var dates = LDG_DATE_FILTER==='ALL' ? allDatesLdg : allDatesLdg.filter(function(d){ return d===LDG_DATE_FILTER; });
+  var dates = _filterDates(allDatesLdg, LDG_DATE_FILTER);
   var ldgDateWrap=document.getElementById('ldg-date-filter');
   if(ldgDateWrap) ldgDateWrap.innerHTML=_datePillsHtml(allDatesLdg, LDG_DATE_FILTER, 'setLdgDateFilter');
   var tot = dates.reduce(function(a,d){ var b=byDate[d];
@@ -1750,7 +1763,7 @@ function renderLanding(){
 // ──────────────────────────────────────────────
 // CONTAINER
 // ──────────────────────────────────────────────
-function setCntDateFilter(v){ CNT_DATE_FILTER=v; renderContainer(); }
+function setCntDateFilter(v){ CNT_DATE_FILTER=_toggleDate(CNT_DATE_FILTER,v); renderContainer(); }
 function setCntView(v,btn){
   CNT_VIEW=v;
   btn.parentNode.querySelectorAll('.pill').forEach(function(b){b.classList.remove('active');});
@@ -1771,7 +1784,7 @@ function renderContainer(){
     b.nsi+=+r.nsi||0; b.users_container+=+r.users_container||0; b.users_vip+=+r.users_vip||0; b.buyers+=+r.buyers||0;
   });
   var allDatesCnt=activeDates(Object.keys(byDate).sort());
-  var dates=CNT_DATE_FILTER==='ALL'?allDatesCnt:allDatesCnt.filter(function(d){return d===CNT_DATE_FILTER;});
+  var dates=_filterDates(allDatesCnt,CNT_DATE_FILTER);
   var cntDateWrap=document.getElementById('cnt-date-filter');
   if(cntDateWrap) cntDateWrap.innerHTML=_datePillsHtml(allDatesCnt,CNT_DATE_FILTER,'setCntDateFilter');
   var tot=dates.reduce(function(a,d){var b=byDate[d];
@@ -1897,7 +1910,7 @@ function renderContainer(){
   });
 
   // Filtrar rows de la tabla por fecha seleccionada
-  var tblRows = CNT_DATE_FILTER==='ALL' ? rows : rows.filter(function(r){ return (r.date||r.DATE)===CNT_DATE_FILTER; });
+  var tblRows = _dateFilterIsAll(CNT_DATE_FILTER) ? rows : rows.filter(function(r){ return CNT_DATE_FILTER.indexOf(r.date||r.DATE)>=0; });
 
   // Table: by container or by vertical
   var colsCnt=[
@@ -2566,7 +2579,7 @@ function renderLandingOrig(){
     b.ul+=+r.users_landing||0; b.uc+=+r.users_container||0;
   });
   var allDatesLdgo=activeDates(Object.keys(byDate).sort());
-  var dates=LDGO_DATE_FILTER==='ALL'?allDatesLdgo:allDatesLdgo.filter(function(d){return d===LDGO_DATE_FILTER;});
+  var dates=_filterDates(allDatesLdgo,LDGO_DATE_FILTER);
   var ldgoDateWrap=document.getElementById('ldgo-date-filter');
   if(ldgoDateWrap) ldgoDateWrap.innerHTML=_datePillsHtml(allDatesLdgo,LDGO_DATE_FILTER,'setLdgoDateFilter');
   var tot=dates.reduce(function(a,d){var b=byDate[d];
