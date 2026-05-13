@@ -473,6 +473,7 @@ var CAL_OPEN_DRILL = null;
 var CAL_CONTAINER_GROUPS = {};
 var OPT = { opt_landing: [], refreshed_at: '' };
 var OPT_LDG_FILTER = 'ALL';
+var OPT_DATE_FILTER_OPT = [];
 var OPT_GROUP_FILTER = 'TODOS';
 var TO_FILTER = 'ALL'; // 'ALL' | 'NO_TO'
 var ST = { dates: [], search_terms: [], refreshed_at: '' };
@@ -570,6 +571,7 @@ function switchCampaign(id){
   LDG_FILTER = 'ALL'; LDGO_FILTER = 'ALL';
   MS_BUCKET = 'ALL'; MS_SEG_FILTER = 'ALL'; CNT_DATE_FILTER = [];
   MS_DATE_FILTER = []; LDG_DATE_FILTER = []; LDGO_DATE_FILTER = []; OP_DATE_FILTER = [];
+  OPT_DATE_FILTER_OPT = [];
   window.OP_DATE_IDX_SET = null;
   document.getElementById('loading').style.display='block';
   document.getElementById('content').style.display='none';
@@ -2724,6 +2726,15 @@ function optSetLanding(v,btn){
   btn.classList.add('active');
   optRenderTable();
 }
+function setOptDateFilter(v){
+  OPT_DATE_FILTER_OPT=_toggleDate(OPT_DATE_FILTER_OPT,v);
+  var wrap=document.getElementById('opt-date-filter');
+  if(wrap){
+    var allDates=(OPT.opt_landing||[]).reduce(function(a,r){if(a.indexOf(r.date)<0)a.push(r.date);return a;},[]).sort();
+    wrap.innerHTML=_datePillsHtml(allDates,OPT_DATE_FILTER_OPT,'setOptDateFilter');
+  }
+  optRenderTable();
+}
 
 function optSetGroup(v,btn){
   OPT_GROUP_FILTER=v;
@@ -2781,6 +2792,7 @@ function optRenderTable(){
   if(!rows.length){el.innerHTML='<p style="color:#aaa;font-size:13px;padding:20px 0">Sin datos — correr Verdi para generar opt_landing.json</p>';return;}
 
   var filtered=OPT_LDG_FILTER==='ALL'?rows:rows.filter(function(r){return r.landing_name===OPT_LDG_FILTER;});
+  if(!_dateFilterIsAll(OPT_DATE_FILTER_OPT)) filtered=filtered.filter(function(r){return OPT_DATE_FILTER_OPT.indexOf(r.date)>=0;});
   var buttons=optAggByButton(filtered, OPT_LDG_FILTER==='ALL');
   if(OPT_GROUP_FILTER!=='TODOS') buttons=buttons.filter(function(b){return b.group===OPT_GROUP_FILTER;});
   if(!buttons.length){el.innerHTML='<p style="color:#aaa;font-size:13px;padding:20px 0">Sin botones para el filtro seleccionado</p>';return;}
@@ -2876,6 +2888,10 @@ function renderOptLanding(){
   var ldgPills='<button class="pill'+(OPT_LDG_FILTER==='ALL'?' active':'')+'" onclick="optSetLanding(\'ALL\',this)">COMBINADO</button>';
   ldgNames.forEach(function(n){ldgPills+='<button class="pill'+(OPT_LDG_FILTER===n?' active':'')+'" onclick="optSetLanding(\''+n+'\',this)">'+n.toUpperCase()+'</button>';});
 
+  // Date pills
+  var allDatesOpt=rows.reduce(function(a,r){if(a.indexOf(r.date)<0)a.push(r.date);return a;},[]).sort();
+  var datePills=_datePillsHtml(allDatesOpt,OPT_DATE_FILTER_OPT,'setOptDateFilter');
+
   // Group toggles
   var grpPills=['TODOS','FOCO','NO FOCO','SIN GRUPO'].map(function(g){
     return '<button class="pill'+(OPT_GROUP_FILTER===g?' active':'')+'" onclick="optSetGroup(\''+g+'\',this)">'+g+'</button>';
@@ -2888,6 +2904,7 @@ function renderOptLanding(){
 
   el.innerHTML=
     '<div class="toggle-row" id="opt-ldg-toggles">'+ldgPills+'</div>'
+    +'<div class="toggle-row" id="opt-date-filter">'+datePills+'</div>'
     +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">'
     +'<span style="font-size:11px;color:#888;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Grupo:</span>'
     +'<div class="toggle-row" style="margin:0" id="opt-grp-toggles">'+grpPills+'</div>'
