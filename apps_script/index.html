@@ -1591,7 +1591,6 @@ function buildLdgToggles(){
   (D.landing||[]).forEach(function(r){ if(names.indexOf(r.landing_name)<0) names.push(r.landing_name); });
   var html = '<button class="pill active" onclick="setLdgFilter(\'ALL\',this)">COMBINADO</button>';
   names.forEach(function(n){ html+='<button class="pill" onclick="setLdgFilter(\''+n+'\',this)">'+n.toUpperCase()+'</button>'; });
-  html+=_toFilterHtml();
   document.getElementById('ldg-toggles').innerHTML=html;
 }
 
@@ -2599,7 +2598,6 @@ function buildLdgoToggles(){
   (D.landing_original||[]).forEach(function(r){if(names.indexOf(r.landing_name)<0)names.push(r.landing_name);});
   var html='<button class="pill active" onclick="setLdgoFilter(\'ALL\',this)">COMBINADO</button>';
   names.forEach(function(n){html+='<button class="pill" onclick="setLdgoFilter(\''+n+'\',this)">'+n.toUpperCase()+'</button>';});
-  html+=_toFilterHtml();
   document.getElementById('ldgo-toggles').innerHTML=html;
 }
 var LDGO_FILTER='ALL';
