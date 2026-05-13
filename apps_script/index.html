@@ -1522,14 +1522,19 @@ function renderMS(){
     bucketMap[b].camps.push(c);
   });
   BUCKET_ORDER.forEach(function(b){
-    if(bucketMap[b]) bucketMap[b].camps.sort(function(a,c){return c.ctr-a.ctr;});
+    if(bucketMap[b]) bucketMap[b].camps.sort(function(a,c){
+      var av=a[SORT_COL.ms]||0, bv=c[SORT_COL.ms]||0;
+      return SORT_ASC.ms ? av-bv : bv-av;
+    });
   });
 
+  var msArrow=function(col){ return SORT_COL.ms===col?(SORT_ASC.ms?' ▲':' ▼'):''; };
+  var thStyle='text-align:right;cursor:pointer;user-select:none;';
   var h='<table><thead><tr>'
     +'<th>Bucket / Campaña</th>'
-    +'<th style="text-align:right">Clicks</th>'
-    +'<th style="text-align:right">Prints</th>'
-    +'<th style="text-align:right">CTR</th>'
+    +'<th style="'+thStyle+'" onclick="sortMS(\'clicks\')">Clicks'+msArrow('clicks')+'</th>'
+    +'<th style="'+thStyle+'" onclick="sortMS(\'prints\')">Prints'+msArrow('prints')+'</th>'
+    +'<th style="'+thStyle+'" onclick="sortMS(\'ctr\')">CTR'+msArrow('ctr')+'</th>'
     +'</tr></thead><tbody>';
 
   BUCKET_ORDER.forEach(function(b){
