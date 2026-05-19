@@ -103,7 +103,7 @@
     "status": "active",
     "campaign_type": "T2",
     "data_file": "data_liqfinal.json",
-    "targets_file": "targets_t1.json",
+    "targets_file": "targets_t3.json",
     "oferta_file": "oferta_liqfinal.json",
     "calidad_file": "calidad_liqfinal.json",
     "search_terms_file": "search_terms.json",

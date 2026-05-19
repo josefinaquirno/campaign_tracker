@@ -1,0 +1,159 @@
+{
+  "name": "Campaign Tracker — Targets T3",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * *"
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger-t3",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "position": [
+        160,
+        80
+      ],
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {
+        "projectId": "meli-bi-data",
+        "sqlQuery": "-- ============================================================\n-- CAMPAIGN TRACKER — Targets T3\n-- LIQUIDACIÓN FINAL 2026 (2026-05-19 → 2026-05-24)\n-- 11 eventos T3 benchmark · D1..D6\n-- ============================================================\n\nWITH\n\nCAMPAIGN_DATES AS (\n  SELECT\n    date,\n    FORMAT_DATE('%w', date) AS dow,\n    ROW_NUMBER() OVER (ORDER BY date) AS day_num\n  FROM UNNEST(GENERATE_DATE_ARRAY(\n    DATE '2026-05-19', DATE '2026-05-24', INTERVAL 1 DAY\n  )) AS date\n),\n\nTS_SESSIONS AS (\n  SELECT CAST(fecha AS DATE) AS date, SUM(sesiones_plan) AS sessions\n  FROM `meli-sbox.PLANNINGMLA.KPIS_MLA_MKT`\n  WHERE fecha IS NOT NULL\n    AND sesiones_plan IS NOT NULL\n    AND CAST(fecha AS DATE) BETWEEN DATE '2026-05-19' AND DATE '2026-05-24'\n  GROUP BY 1\n),\n\nTS_NMV AS (\n  SELECT CAST(fecha AS DATE) AS date, SUM(PLAN.TGMV_USD) AS nmv\n  FROM `meli-sbox.PLANNINGMLA.DM_TARGETS_MLA`\n  WHERE fecha IS NOT NULL\n    AND PLAN.TGMV_USD IS NOT NULL\n    AND CAST(fecha AS DATE) BETWEEN DATE '2026-05-19' AND DATE '2026-05-24'\n  GROUP BY 1\n),\n\nDOW_TS_2026 AS (\n  SELECT FORMAT_DATE('%w', date) AS dow, AVG(sessions) AS avg_sessions\n  FROM TS_SESSIONS\n  GROUP BY 1\n),\n\n-- Mapa de eventos: SNEAKER_MUEBLE tiene dos filas (doble landing)\nEVENT_LOOKUP AS (\n  SELECT 'SALI_RUTA'      AS evento, DATE '2026-01-01' AS ev_start, DATE '2026-01-11' AS ev_end, 'accesorios-para-vehiculos'   AS landing_name\n  UNION ALL SELECT 'FULL_WEEK_1',    DATE '2026-01-12', DATE '2026-01-18', 'campana-envios-full'\n  UNION ALL SELECT 'WELLNESS',       DATE '2026-01-19', DATE '2026-01-25', 'salud-y-equipamiento-medico'\n  UNION ALL SELECT 'FULL_WEEK_2',    DATE '2026-02-02', DATE '2026-02-08', 'campana-envios-full'\n  UNION ALL SELECT 'LIQ_MODA',       DATE '2026-02-23', DATE '2026-03-01', 'MLA1430'\n  UNION ALL SELECT 'FULL_WEEK_3',    DATE '2026-03-16', DATE '2026-03-22', 'campana-envios-full'\n  UNION ALL SELECT 'DESCANSO',       DATE '2026-03-20', DATE '2026-03-31', 'semana-del-descanso'\n  UNION ALL SELECT 'TEC_WEEK',       DATE '2026-04-06', DATE '2026-04-12', 'tec-week'\n  UNION ALL SELECT 'SNEAKER_MUEBLE', DATE '2026-04-13', DATE '2026-04-19', 'MLA1430'\n  UNION ALL SELECT 'SNEAKER_MUEBLE', DATE '2026-04-13', DATE '2026-04-19', 'semana-del-mueble'\n  UNION ALL SELECT 'PADEL',          DATE '2026-05-04', DATE '2026-05-10', 'semana-del-padel'\n),\n\nLANDING_DAILY AS (\n  SELECT\n    t.DATE,\n    ev.evento,\n    SUM(t.NOT_LOG_USERS)       AS usuarios,\n    SUM(t.SESSIONS)            AS sessions,\n    SUM(t.LISTADO_TOTAL_USERS) AS ses_cont,\n    SUM(t.VPP_TOTAL_USERS)     AS ses_vip,\n    SUM(t.SI_168HS)            AS nsi,\n    SUM(t.TRANSACTIONS_168HS)  AS trx,\n    SUM(t.NMV_168HS)           AS nmv\n  FROM `meli-bi-data.WHOWNER.DM_LANDING_ATTRIBUTION_CONTAINER_DEAL` t\n  JOIN EVENT_LOOKUP ev\n    ON t.DATE BETWEEN ev.ev_start AND ev.ev_end\n   AND t.LANDING_NAME = ev.landing_name\n  WHERE t.SITE = 'MLA'\n  GROUP BY t.DATE, ev.evento\n),\n\nEVENT_DAILY_RATIOS AS (\n  SELECT\n    ld.DATE,\n    FORMAT_DATE('%w', ld.DATE)                    AS dow,\n    ld.evento,\n    SAFE_DIVIDE(ld.sessions, dts.avg_sessions)    AS ratio_sessions,\n    SAFE_DIVIDE(ld.usuarios, ld.sessions)         AS f_usuarios,\n    SAFE_DIVIDE(ld.ses_cont, ld.sessions)         AS f_ses_cont,\n    SAFE_DIVIDE(ld.ses_vip,  ld.sessions)         AS f_ses_vip,\n    SAFE_DIVIDE(ld.nsi,      ld.sessions)         AS f_nsi,\n    SAFE_DIVIDE(ld.trx,      ld.sessions)         AS f_trx,\n    SAFE_DIVIDE(ld.nmv,      ld.sessions)         AS f_nmv\n  FROM LANDING_DAILY ld\n  LEFT JOIN DOW_TS_2026 dts ON FORMAT_DATE('%w', ld.DATE) = dts.dow\n),\n\nEVENT_DOW_AVG AS (\n  SELECT\n    evento, dow,\n    AVG(ratio_sessions) AS ratio_sessions,\n    AVG(f_usuarios)     AS f_usuarios,\n    AVG(f_ses_cont)     AS f_ses_cont,\n    AVG(f_ses_vip)      AS f_ses_vip,\n    AVG(f_nsi)          AS f_nsi,\n    AVG(f_trx)          AS f_trx,\n    AVG(f_nmv)          AS f_nmv\n  FROM EVENT_DAILY_RATIOS\n  GROUP BY 1, 2\n),\n\nDOW_METRICS AS (\n  SELECT\n    dow,\n    AVG(ratio_sessions) AS share,\n    AVG(f_usuarios)     AS f_usuarios,\n    AVG(f_ses_cont)     AS f_ses_cont,\n    AVG(f_ses_vip)      AS f_ses_vip,\n    AVG(f_nsi)          AS f_nsi,\n    AVG(f_trx)          AS f_trx,\n    AVG(f_nmv)          AS f_nmv\n  FROM EVENT_DOW_AVG\n  GROUP BY 1\n),\n\nCONTAINER_DAILY AS (\n\n  -- SALI A LA RUTA (01-Ene → 11-Ene)\n  SELECT DATE, 'SALI_RUTA' AS evento,\n    SUM(C_UNIQUE_SESSION) AS sessions, SUM(V_UNIQUE_SESSION) AS ses_vip,\n    SUM(SI_168HS) AS nsi, SUM(TRANSACTION_168HS) AS trx\n  FROM `meli-bi-data.WHOWNER.DM_CONTAINERS_DEALS_ATTRIBUTION`\n  WHERE SITE = 'MLA' AND DATE BETWEEN '2026-01-01' AND '2026-01-11'\n    AND (UPPER(CONTAINER_NAME) LIKE '%MK AO CATEGORY LANDING 2025 ACC%'\n      OR UPPER(CONTAINER_NAME) LIKE '%MKP T3 SALI A LA RUTA ENERO 2026%'\n      OR UPPER(CONTAINER_NAME) LIKE '%LANDING DE OFERTAS%')\n  GROUP BY DATE\n\n  UNION ALL\n\n  -- FULL WEEK 1 (12-Ene → 18-Ene)\n  SELECT DATE, 'FULL_WEEK_1' AS evento,\n    SUM(C_UNIQUE_SESSION), SUM(V_UNIQUE_SESSION), SUM(SI_168HS), SUM(TRANSACTION_168HS)\n  FROM `meli-bi-data.WHOWNER.DM_CONTAINERS_DEALS_ATTRIBUTION`\n  WHERE SITE = 'MLA' AND DATE BETWEEN '2026-01-12' AND '2026-01-18'\n    AND UPPER(CONTAINER_NAME) LIKE '%MKP T3 FULL WEEK ENERO 2026%'\n  GROUP BY DATE\n\n  UNION ALL\n\n  -- WELLNESS WEEK (19-Ene → 25-Ene)\n  SELECT DATE, 'WELLNESS' AS evento,\n    SUM(C_UNIQUE_SESSION), SUM(V_UNIQUE_SESSION), SUM(SI_168HS), SUM(TRANSACTION_168HS)\n  FROM `meli-bi-data.WHOWNER.DM_CONTAINERS_DEALS_ATTRIBUTION`\n  WHERE SITE = 'MLA' AND DATE BETWEEN '2026-01-19' AND '2026-01-25'\n    AND UPPER(CONTAINER_NAME) LIKE '%MK T3 HEALTH 2026 WELLNESS WEEK%'\n  GROUP BY DATE\n\n  UNION ALL\n\n  -- FULL WEEK 2 (02-Feb → 08-Feb)\n  SELECT DATE, 'FULL_WEEK_2' AS evento,\n    SUM(C_UNIQUE_SESSION), SUM(V_UNIQUE_SESSION), SUM(SI_168HS), SUM(TRANSACTION_168HS)\n  FROM `meli-bi-data.WHOWNER.DM_CONTAINERS_DEALS_ATTRIBUTION`\n  WHERE SITE = 'MLA' AND DATE BETWEEN '2026-02-02' AND '2026-02-08'\n    AND UPPER(CONTAINER_NAME) LIKE '%MKP T3 FULL WEEK FEBRERO 2026%'\n  GROUP BY DATE\n\n  UNION ALL\n\n  -- LIQ MODA VERANO (23-Feb → 01-Mar)\n  SELECT DATE, 'LIQ_MODA' AS evento,\n    SUM(C_UNIQUE_SESSION), SUM(V_UNIQUE_SESSION), SUM(SI_168HS), SUM(TRANSACTION_168HS)\n  FROM `meli-bi-data.WHOWNER.DM_CONTAINERS_DEALS_ATTRIBUTION`\n  WHERE SITE = 'MLA' AND DATE BETWEEN '2026-02-23' AND '2026-03-01'\n    AND UPPER(CONTAINER_NAME) LIKE '%MK AO FASHION MODA%'\n  GROUP BY DATE\n\n  UNION ALL\n\n  -- FULL WEEK 3 (16-Mar → 22-Mar)\n  SELECT DATE, 'FULL_WEEK_3' AS evento,\n    SUM(C_UNIQUE_SESSION), SUM(V_UNIQUE_SESSION), SUM(SI_168HS), SUM(TRANSACTION_168HS)\n  FROM `meli-bi-data.WHOWNER.DM_CONTAINERS_DEALS_ATTRIBUTION`\n  WHERE SITE = 'MLA' AND DATE BETWEEN '2026-03-16' AND '2026-03-22'\n    AND UPPER(CONTAINER_NAME) LIKE '%MKP T3 FULL WEEK MARZO 2026%'\n  GROUP BY DATE\n\n  UNION ALL\n\n  -- SEMANA DEL DESCANSO (20-Mar → 31-Mar)\n  SELECT DATE, 'DESCANSO' AS evento,\n    SUM(C_UNIQUE_SESSION), SUM(V_UNIQUE_SESSION), SUM(SI_168HS), SUM(TRANSACTION_168HS)\n  FROM `meli-bi-data.WHOWNER.DM_CONTAINERS_DEALS_ATTRIBUTION`\n  WHERE SITE = 'MLA' AND DATE BETWEEN '2026-03-20' AND '2026-03-31'\n    AND UPPER(CONTAINER_NAME) LIKE '%MK AO CATEGORY LANDING 2025 FH%'\n  GROUP BY DATE\n\n  UNION ALL\n\n  -- TEC WEEK (06-Abr → 12-Abr)\n  SELECT DATE, 'TEC_WEEK' AS evento,\n    SUM(C_UNIQUE_SESSION), SUM(V_UNIQUE_SESSION), SUM(SI_168HS), SUM(TRANSACTION_168HS)\n  FROM `meli-bi-data.WHOWNER.DM_CONTAINERS_DEALS_ATTRIBUTION`\n  WHERE SITE = 'MLA' AND DATE BETWEEN '2026-04-06' AND '2026-04-12'\n    AND UPPER(CONTAINER_NAME) LIKE '%MK TEC WEEK ABR 26%'\n  GROUP BY DATE\n\n  UNION ALL\n\n  -- SNEAKER WEEK + SEMANA DEL MUEBLE (13-Abr → 19-Abr)\n  SELECT DATE, 'SNEAKER_MUEBLE' AS evento,\n    SUM(C_UNIQUE_SESSION), SUM(V_UNIQUE_SESSION), SUM(SI_168HS), SUM(TRANSACTION_168HS)\n  FROM `meli-bi-data.WHOWNER.DM_CONTAINERS_DEALS_ATTRIBUTION`\n  WHERE SITE = 'MLA' AND DATE BETWEEN '2026-04-13' AND '2026-04-19'\n    AND (UPPER(CONTAINER_NAME) LIKE '%SNEAKER%DAY%'\n      OR UPPER(CONTAINER_NAME) LIKE '%MKT T3 SEMANA DEL MUEBLE%')\n  GROUP BY DATE\n\n  UNION ALL\n\n  -- SEMANA DEL PADEL (04-May → 10-May)\n  SELECT DATE, 'PADEL' AS evento,\n    SUM(C_UNIQUE_SESSION), SUM(V_UNIQUE_SESSION), SUM(SI_168HS), SUM(TRANSACTION_168HS)\n  FROM `meli-bi-data.WHOWNER.DM_CONTAINERS_DEALS_ATTRIBUTION`\n  WHERE SITE = 'MLA' AND DATE BETWEEN '2026-05-04' AND '2026-05-10'\n    AND UPPER(CONTAINER_NAME) LIKE '%SPORTS SEMANA DEL PADEL%'\n  GROUP BY DATE\n),\n\nCONTAINER_DAILY_NUMBERED AS (\n  SELECT\n    *,\n    ROW_NUMBER() OVER (PARTITION BY evento ORDER BY DATE) AS day_num\n  FROM CONTAINER_DAILY\n),\n\nCONTAINER_BENCHMARK AS (\n  SELECT\n    day_num,\n    AVG(sessions)                          AS avg_sessions,\n    AVG(SAFE_DIVIDE(ses_vip, sessions))    AS f_ses_vip,\n    AVG(SAFE_DIVIDE(nsi,     sessions))    AS f_nsi,\n    AVG(SAFE_DIVIDE(trx,     sessions))    AS f_trx\n  FROM CONTAINER_DAILY_NUMBERED\n  WHERE day_num <= 6\n  GROUP BY day_num\n),\n\nMS_CTR AS (\n  SELECT\n    CASE\n      WHEN LOWER(LINE_ITEM_NAME) LIKE '%tachado%'\n        OR LOWER(LINE_ITEM_NAME) LIKE '%celebrity%' THEN 'PRINCIPAL'\n      WHEN LOWER(LINE_ITEM_NAME) LIKE '%alta%'  THEN 'HIGH'\n      WHEN LOWER(LINE_ITEM_NAME) LIKE '%media%' THEN 'MID'\n      ELSE 'OTHER'\n    END AS bucket,\n    SAFE_DIVIDE(SUM(CLICKS_QTY), NULLIF(SUM(IMPRESSION_VIEWS_QTY), 0)) AS ctr\n  FROM `meli-bi-data.WHOWNER.BT_ADS_DISP_METRICS_DAILY`\n  WHERE EVENT_LOCAL_DT BETWEEN '2026-01-01' AND CURRENT_DATE()\n    AND SIT_SITE_ID = 'MLA'\n    AND PLACEMENT LIKE '%MAIN-SLIDER%'\n    AND LINE_ITEM_NAME NOT LIKE '%SPLINTER%'\n    AND CAMPAIGN_NAME NOT LIKE '%FD%'\n  GROUP BY 1\n),\n\nTARGETS_BY_DATE AS (\n  SELECT\n    cd.date,\n    cd.dow,\n    COALESCE(ts_s.sessions, 0)                                                               AS ts_sessions,\n    COALESCE(ts_n.nmv,      0)                                                               AS ts_nmv,\n    ROUND(COALESCE(dm.share, 0) * COALESCE(ts_s.sessions, 0))                               AS ldg_sessions,\n    ROUND(COALESCE(dm.share, 0) * COALESCE(ts_s.sessions, 0) * COALESCE(dm.f_usuarios, 0)) AS ldg_usuarios,\n    ROUND(COALESCE(dm.share, 0) * COALESCE(ts_s.sessions, 0) * COALESCE(dm.f_ses_cont, 0)) AS ldg_ses_cont,\n    ROUND(COALESCE(dm.share, 0) * COALESCE(ts_s.sessions, 0) * COALESCE(dm.f_ses_vip,  0)) AS ldg_ses_vip,\n    ROUND(COALESCE(dm.share, 0) * COALESCE(ts_s.sessions, 0) * COALESCE(dm.f_nsi,      0)) AS ldg_nsi,\n    ROUND(COALESCE(dm.share, 0) * COALESCE(ts_s.sessions, 0) * COALESCE(dm.f_trx,      0)) AS ldg_trx,\n    ROUND(COALESCE(dm.share, 0) * COALESCE(ts_s.sessions, 0) * COALESCE(dm.f_nmv,      0)) AS ldg_nmv,\n    ROUND(COALESCE(cb.avg_sessions,             0))                                          AS cnt_sessions,\n    ROUND(COALESCE(cb.avg_sessions, 0) * COALESCE(cb.f_ses_vip, 0))                         AS cnt_ses_vip,\n    ROUND(COALESCE(cb.avg_sessions, 0) * COALESCE(cb.f_nsi,     0))                         AS cnt_nsi,\n    ROUND(COALESCE(cb.avg_sessions, 0) * COALESCE(cb.f_trx,     0))                         AS cnt_trx,\n    ROUND(COALESCE(cb.avg_sessions, 0) * COALESCE(cb.f_trx,     0) * 138.0)                 AS cnt_nmv,\n    ROUND(SAFE_DIVIDE(\n      COALESCE(cb.avg_sessions, 0) * COALESCE(cb.f_trx, 0) * 138.0,\n      NULLIF(COALESCE(cb.avg_sessions, 0) * COALESCE(cb.f_nsi, 0), 0)\n    ), 1) AS nasp\n  FROM CAMPAIGN_DATES cd\n  LEFT JOIN TS_SESSIONS        ts_s ON cd.date    = ts_s.date\n  LEFT JOIN TS_NMV              ts_n ON cd.date    = ts_n.date\n  LEFT JOIN DOW_METRICS         dm   ON cd.dow     = dm.dow\n  LEFT JOIN CONTAINER_BENCHMARK cb   ON cd.day_num = cb.day_num\n)\n\nSELECT TO_BASE64(CAST(CONCAT(\n  '{\"dates\":',         (SELECT TO_JSON_STRING(ARRAY_AGG(CAST(date AS STRING) ORDER BY date)) FROM TARGETS_BY_DATE),\n  ',\"to_dates\":',      (SELECT TO_JSON_STRING(ARRAY_AGG(CAST(date AS STRING) ORDER BY date)) FROM TARGETS_BY_DATE),\n  ',\"ms\":{',\n    '\"ctr_all\":',        IFNULL(CAST((SELECT ROUND(SAFE_DIVIDE(SUM(CLICKS_QTY),NULLIF(SUM(IMPRESSION_VIEWS_QTY),0)),4) FROM `meli-bi-data.WHOWNER.BT_ADS_DISP_METRICS_DAILY` WHERE EVENT_LOCAL_DT BETWEEN '2026-01-01' AND CURRENT_DATE() AND SIT_SITE_ID = 'MLA' AND PLACEMENT LIKE '%MAIN-SLIDER%' AND LINE_ITEM_NAME NOT LIKE '%SPLINTER%' AND CAMPAIGN_NAME NOT LIKE '%FD%') AS STRING),'0'),\n    ',\"ctr_principal\":', CAST(COALESCE((SELECT ROUND(MAX(IF(bucket='PRINCIPAL',ctr,NULL)),4) FROM MS_CTR),0) AS STRING),\n    ',\"ctr_high\":',      CAST(COALESCE((SELECT ROUND(MAX(IF(bucket='HIGH',    ctr,NULL)),4) FROM MS_CTR),0) AS STRING),\n    ',\"ctr_mid\":',       CAST(COALESCE((SELECT ROUND(MAX(IF(bucket='MID',     ctr,NULL)),4) FROM MS_CTR),0) AS STRING),\n  '}',\n  ',\"total_site\":{\"sessions\":',   (SELECT TO_JSON_STRING(ARRAY_AGG(ROUND(ts_sessions,0) ORDER BY date)) FROM TARGETS_BY_DATE),\n    ',\"nmv\":',                    (SELECT TO_JSON_STRING(ARRAY_AGG(ROUND(ts_nmv,0)      ORDER BY date)) FROM TARGETS_BY_DATE),\n  '}',\n  ',\"landing\":{\"sessions\":',           (SELECT TO_JSON_STRING(ARRAY_AGG(ldg_sessions  ORDER BY date)) FROM TARGETS_BY_DATE),\n    ',\"share_sessions\":',               (SELECT TO_JSON_STRING(ARRAY_AGG(ROUND(SAFE_DIVIDE(CAST(ldg_sessions AS FLOAT64), NULLIF(ts_sessions,0)),6) ORDER BY date)) FROM TARGETS_BY_DATE),\n    ',\"ctr\":',                          (SELECT TO_JSON_STRING(ARRAY_AGG(ROUND(SAFE_DIVIDE(CAST(ldg_ses_cont AS FLOAT64), NULLIF(ldg_usuarios,0)),4) ORDER BY date)) FROM TARGETS_BY_DATE),\n    ',\"usuarios_landing\":',             (SELECT TO_JSON_STRING(ARRAY_AGG(ldg_usuarios  ORDER BY date)) FROM TARGETS_BY_DATE),\n    ',\"ses_contenedor\":',               (SELECT TO_JSON_STRING(ARRAY_AGG(ldg_ses_cont  ORDER BY date)) FROM TARGETS_BY_DATE),\n    ',\"ses_vip\":',                      (SELECT TO_JSON_STRING(ARRAY_AGG(ldg_ses_vip   ORDER BY date)) FROM TARGETS_BY_DATE),\n    ',\"nsi\":',                          (SELECT TO_JSON_STRING(ARRAY_AGG(ldg_nsi       ORDER BY date)) FROM TARGETS_BY_DATE),\n    ',\"transacciones\":',                (SELECT TO_JSON_STRING(ARRAY_AGG(ldg_trx       ORDER BY date)) FROM TARGETS_BY_DATE),\n    ',\"nmv\":',                          (SELECT TO_JSON_STRING(ARRAY_AGG(ldg_nmv       ORDER BY date)) FROM TARGETS_BY_DATE),\n  '}',\n  ',\"container\":{\"sessions\":',         (SELECT TO_JSON_STRING(ARRAY_AGG(cnt_sessions  ORDER BY date)) FROM TARGETS_BY_DATE),\n    ',\"nmv\":',                          (SELECT TO_JSON_STRING(ARRAY_AGG(cnt_nmv       ORDER BY date)) FROM TARGETS_BY_DATE),\n    ',\"share_nmv\":',                    (SELECT TO_JSON_STRING(ARRAY_AGG(ROUND(SAFE_DIVIDE(CAST(cnt_nmv AS FLOAT64), NULLIF(ts_nmv,0)),6) ORDER BY date)) FROM TARGETS_BY_DATE),\n    ',\"share_sessions\":',               (SELECT TO_JSON_STRING(ARRAY_AGG(ROUND(SAFE_DIVIDE(CAST(cnt_sessions AS FLOAT64), NULLIF(ts_sessions,0)),6) ORDER BY date)) FROM TARGETS_BY_DATE),\n    ',\"cvr\":',                          (SELECT TO_JSON_STRING(ARRAY_AGG(ROUND(SAFE_DIVIDE(CAST(cnt_trx AS FLOAT64), NULLIF(cnt_sessions,0)),4) ORDER BY date)) FROM TARGETS_BY_DATE),\n    ',\"ses_vip\":',                      (SELECT TO_JSON_STRING(ARRAY_AGG(cnt_ses_vip   ORDER BY date)) FROM TARGETS_BY_DATE),\n    ',\"nsi\":',                          (SELECT TO_JSON_STRING(ARRAY_AGG(cnt_nsi       ORDER BY date)) FROM TARGETS_BY_DATE),\n    ',\"transacciones\":',                (SELECT TO_JSON_STRING(ARRAY_AGG(cnt_trx       ORDER BY date)) FROM TARGETS_BY_DATE),\n  '}',\n  ',\"nasp\":', (SELECT TO_JSON_STRING(ARRAY_AGG(nasp ORDER BY date)) FROM TARGETS_BY_DATE),\n  ',\"refreshed_at\":\"', FORMAT_TIMESTAMP('%Y-%m-%dT%H:%M:%S', CURRENT_TIMESTAMP(), 'America/Argentina/Buenos_Aires'), '\"}'\n) AS BYTES)) AS data_b64",
+        "options": {
+          "location": "US"
+        }
+      },
+      "id": "bq-targets-t3",
+      "name": "BQ Targets T3",
+      "type": "n8n-nodes-base.googleBigQuery",
+      "position": [
+        340,
+        80
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "url": "https://api.github.com/repos/josefinaquirno/campaign_tracker/contents/docs/targets_t3.json",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer TU_GITHUB_TOKEN_ACA"
+            },
+            {
+              "name": "User-Agent",
+              "value": "verdi-flow"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-sha-t3",
+      "name": "Get SHA T3",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        520,
+        80
+      ],
+      "typeVersion": 4.2,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "https://api.github.com/repos/josefinaquirno/campaign_tracker/contents/docs/targets_t3.json",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer TU_GITHUB_TOKEN_ACA"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "User-Agent",
+              "value": "verdi-flow"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "message",
+              "value": "chore: refresh targets_t3.json [skip ci]"
+            },
+            {
+              "name": "content",
+              "value": "={{ $('BQ Targets T3').first().json.data_b64.replace(/\\n/g, '').replace(/\\r/g, '') }}"
+            },
+            {
+              "name": "sha",
+              "value": "={{ $('Get SHA T3').first().json.sha }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "push-targets-t3",
+      "name": "Push T3 to GitHub",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        700,
+        80
+      ],
+      "typeVersion": 4.2
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "BQ Targets T3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "BQ Targets T3": {
+      "main": [
+        [
+          {
+            "node": "Get SHA T3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get SHA T3": {
+      "main": [
+        [
+          {
+            "node": "Push T3 to GitHub",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}
