@@ -144,5 +144,44 @@
     "images": {
       "general": "MS_GENERAL_CELEBRITY_MKP_T1_HOT_SALE_MAYO_2026.png"
     }
+  },
+  {
+    "id": "liquidacion_final_2026",
+    "name": "LIQUIDACIÓN FINAL",
+    "start": "2026-05-19",
+    "end": "2026-05-24",
+    "status": "active",
+    "campaign_type": "T2",
+    "data_file": "data_liqfinal.json",
+    "targets_file": "targets_t1.json",
+    "oferta_file": "oferta_liqfinal.json",
+    "calidad_file": "calidad_liqfinal.json",
+    "search_terms_file": "search_terms.json",
+    "to_dates": [
+      "2026-05-19",
+      "2026-05-24"
+    ],
+    "container_groups": {
+      "MLA1633554": "FOCO",
+      "MLA1633557": "FOCO",
+      "MLA1633559": "FOCO",
+      "MLA1633569": "FOCO",
+      "MLA1633563": "FOCO",
+      "MLA1633572": "FOCO",
+      "MLA1633577": "FOCO",
+      "MLA1633583": "FOCO",
+      "MLA1633585": "FOCO",
+      "MLA1635040": "FOCO",
+      "MLA1635046": "FOCO",
+      "MLA1635051": "FOCO",
+      "MLA1635055": "FOCO",
+      "MLA1635053": "FOCO",
+      "MLA1635057": "FOCO",
+      "MLA1635086": "FOCO",
+      "MLA1635093": "FOCO",
+      "MLA1635105": "FOCO",
+      "MLA1635113": "FOCO"
+    },
+    "images": {}
   }
 ]
