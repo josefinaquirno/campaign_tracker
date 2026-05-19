@@ -1109,12 +1109,13 @@ function renderSummary(){
   // Build lookup maps from D
   var msByDate={};
   (D.ms||[]).forEach(function(r){
-    var d=r.fecha; if(!msByDate[d]) msByDate[d]={ac:0,ap:0,pc:0,pp:0,hc:0,hp:0,mc:0,mp:0};
+    var d=r.fecha; if(!msByDate[d]) msByDate[d]={ac:0,ap:0,pc:0,pp:0,hc:0,hp:0,mc:0,mp:0,oc:0,op:0};
     var b=msByDate[d], sub=getMSSubBucket(r.line_item);
     b.ac+=+r.clicks||0; b.ap+=+r.prints||0;
     if(sub==='principal'){b.pc+=+r.clicks||0;b.pp+=+r.prints||0;}
     if(sub==='high'){b.hc+=+r.clicks||0;b.hp+=+r.prints||0;}
     if(sub==='mid'){b.mc+=+r.clicks||0;b.mp+=+r.prints||0;}
+    if(sub==='others'){b.oc+=+r.clicks||0;b.op+=+r.prints||0;}
   });
   // Usa landing_original si está disponible, sino D.landing como fallback
   var ldgSrc = (D.landing_original&&D.landing_original.length>0) ? D.landing_original : (D.landing||[]);
@@ -2110,7 +2111,7 @@ function setCmpCampaign(id){
   }
 }
 function setSumMSFilter(v){ SUM_MS_FILTER=v; renderSummary(); }
-function getMSSubBucket(li){ var l=(li||'').toLowerCase(); if(l.indexOf('alta')>=0)return 'high'; if(l.indexOf('mid')>=0)return 'mid'; return 'principal'; }
+function getMSSubBucket(li){ var l=(li||'').toLowerCase(); if(l.indexOf('alta')>=0)return 'high'; if(l.indexOf('media')>=0)return 'mid'; if(l.indexOf('principal')>=0||l.indexOf('celebrity')>=0||l.indexOf('tachado')>=0)return 'principal'; return 'others'; }
 
 // Aggregate an array of daily rows into { date: aggregatedObj }
 function cmpAggByDate(arr){
