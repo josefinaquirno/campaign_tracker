@@ -1248,7 +1248,7 @@ function renderSummary(){
     // LEFT
     +'<div class="op-left">'
     +'<div class="op-sec-lbl"><span class="op-dot op-dot-ms"></span>Main Slider</div>'
-    +'<div class="op-mwrap"><table class="op-mt"><thead><tr><th></th><th>TOTAL</th><th>VAR vs TGT</th></tr></thead><tbody>'
+    +'<div class="op-mwrap"><table class="op-mt"><thead><tr><th></th><th>TOTAL</th><th>vs BAU</th></tr></thead><tbody>'
     +'<tr><td>CTR Total</td><td class="op-val" id="op-ms-ctr-v">—</td><td><span class="op-badge op-neut" id="op-ms-ctr-d">—</span></td></tr>'
     +'</tbody></table></div>'
     +'<div class="op-sec-lbl" style="margin-top:6px;"><span class="op-dot op-dot-ms"></span>Landing</div>'
@@ -3025,6 +3025,11 @@ function opDt(a,t,isPP){
   if(isPP)return {text:sign+(diff*100).toFixed(2)+'pp',cls:cls};
   return {text:sign+(diff/Math.abs(t)*100).toFixed(1)+'%',cls:cls};
 }
+function opDtBAU(a,t){
+  if(a===null||t===null||t===0)return {text:'—',cls:'op-neut'};
+  var pct=(a-t)/t*100, cls=pct>=0?'op-pos':'op-neg';
+  return {text:(pct>=0?'▲ ':'▼ ')+Math.abs(pct).toFixed(1)+'% vs BAU '+(t*100).toFixed(2)+'%', cls:cls};
+}
 function opSet(vi,di,vt,dt){
   var ve=document.getElementById(vi),de=document.getElementById(di);
   if(ve)ve.textContent=vt;
@@ -3052,11 +3057,12 @@ function opKPIs(){
       lbl.textContent=DL[0]+' → '+DL[maxIdx]+' (acum.)';
     }
   }
-  // MS
-  var msCtr=opAvg(OP.ms_ctr,i0,i1),msTgt=opAvg(OP.ms_ctr_tgt,i0,i1);
-  opSet('op-ms-ctr-v','op-ms-ctr-d',opP(msCtr),opDt(msCtr,msTgt,true));
-  var celCtr=opAvg(OP.celebrity_ctr,i0,i1),celTgt=(D.targets&&D.targets.ms&&+D.targets.ms.ctr_principal>0)?+D.targets.ms.ctr_principal:null;
-  opSet('op-cel-ctr-v','op-cel-ctr-d',opP(celCtr),opDt(celCtr,celTgt,true));
+  // MS — comparación vs BAU (escalar desde targets.ms.ctr_principal, igual que deep dive)
+  var msBau=(D.targets&&D.targets.ms&&+D.targets.ms.ctr_principal>0)?+D.targets.ms.ctr_principal:null;
+  var msCtr=opAvg(OP.ms_ctr,i0,i1);
+  opSet('op-ms-ctr-v','op-ms-ctr-d',opP(msCtr),opDtBAU(msCtr,msBau));
+  var celCtr=opAvg(OP.celebrity_ctr,i0,i1);
+  opSet('op-cel-ctr-v','op-cel-ctr-d',opP(celCtr),opDtBAU(celCtr,msBau));
   opSet('op-tac-ctr-v','op-tac-ctr-d',opP(opAvg(OP.tachados_ctr,i0,i1)),{text:'—',cls:'op-neut'});
   // Landing
   var lS=opSum(OP.landing_ses,i0,i1)||null,lSt=opSum(OP.landing_ses_tgt,i0,i1)||null;
